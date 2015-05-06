@@ -1,61 +1,72 @@
-[![Build status](https://travis-ci.org/fpinscala/fpinscala.svg?branch=master)](https://travis-ci.org/fpinscala/fpinscala)
+This is my ([wjd](https://github.com/williamdemeo)) version of the fpinscala
+repository.  I've created it while working through the book
+"Functional Programming in Scala", so it contains my solutions to exercises in
+that book, along with test code to check the answers.
 
+The first part of this README file contains my notes on how to get started with
+the fpinscala repository in order to work on the exercises in Eclipse.
 
-(This is my ([wjd](https://github.com/williamdemeo)) version of the README
-file.  For the [original version](#original-readme-file) scroll down, or go to
+For the [original version](#original-readme-file) scroll down, or go to
 the original fpinscala git repository at the url above.)
 
 
-To get started with the exercises in the book "Functional Programming in Scala",
+To get started with the exercises in the book in the Eclipse IDE,
 I followed these steps:
 
-1. Add the eclipse plugin to my sbt install by putting the following
-   line in the file ~/.sbt/0.13/plugins/plugins.sbt
+1. Clone the [fpinscala repository](https://github.com/fpinscala/fpinscala)
+   onto local drive:
 
-        addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "3.0.0")
+        git clone git@github.com:fpinscala/fpinscala.git
 
-   (Note: I already had sbt installed.)
+2. Create a new repository called my_fpinscala in my own GitHub account, set
+   the remote url of my cloned copy of fpinscala to point to this new repo,
+   and push the files to the new repo:
 
-2. Fork the fpinscala repository from https://github.com/fpinscala/fpinscala into my own GitHub account.
+        git remote set-url origin git@github.com:williamdemeo/my_fpinscala.git
+		git push -u origin master
+		
 
-3. Clone my forked version of the repository to my local hard drive:
+3. Now we need to prepare the project to be imported into Eclipse.
 
-        git clone git@github.com:williamdemeo/fpinscala.git
-	
-4. Enter the resulting fpinscala directory and execute the following:
+   The first step is to make sure the Scala build tool (sbt) is installed with
+   the right plugins and libraries. (I already had sbt installed, so just need
+   to configure it.)
 
-        ~/git/Scala/fpinscala$ sbt
-        > project exercises
-        > compile
-		> eclipse
+   - To add the eclipse plugin to sbt, put the following line in the file
+     ~/.sbt/0.13/plugins/plugins.sbt: 
 
-   This switches to the exercises project, where your code lives, compiles the
-   code, and then generates Eclipse files necessary to import the project into
-   Eclipse.
+            addSbtPlugin("com.typesafe.sbteclipse" % "sbteclipse-plugin" % "3.0.0")
 
-5. Import project into Eclipse:
+   - To use [ScalaCheck](https://www.scalacheck.org/) and
+     [ScalaTest](http://www.scalatest.org/) for testing solutions to the
+     exercises, add a new file called build.sbt in the exercises directory, with
+     the following lines: 
+
+            libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test"
+
+            libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
+
+            libraryDependencies += "junit" % "junit" % "4.10" % "test"
+
+     (These commands must be separated by blank lines, as shown above.)
+
+   - Enter the my_fpinscala directory and execute the following:
+
+            ~/git/Scala/fpinscala$ sbt
+            > project exercises
+            > compile
+    		> eclipse
+
+     This switches to the exercises project, where your code lives, compiles the
+     code, and then generates Eclipse files necessary to import the project into
+     Eclipse.
+
+5. Finally, we can import projects into Eclipse:
 
         File --> Import --> Git --> Projects From Git --> etc.
 
    The result: three projects are imported into Eclipse, called `answers`,
    `chapter-code`, and `exercises`.
-
-6. To use [ScalaCheck](https://www.scalacheck.org/) and
-   [ScalaTest](http://www.scalatest.org/) for testing my solutions to the
-   exercises, I added the file build.sbt in the exercises directory, with the
-   following lines: 
-
-        libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.12.2" % "test"
-
-        libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
-
-        libraryDependencies += "junit" % "junit" % "4.10" % "test"
-
-   (These commands must be separated by blank lines, as shown above.)
-   Then the `eclipse` command from step 4 above must be invoked one more time:
-   
-        ~/git/Scala/fpinscala$ sbt
-		> eclipse
 
 
 ---------------------------------
