@@ -1,9 +1,10 @@
 ## my_fpinscala
 
-This is my ([wjd](https://github.com/williamdemeo)) version of the fpinscala
-repository.  I created it while working through the book
-"Functional Programming in Scala", so it contains my solutions to exercises in
-that book, along with test code to check the answers.
+This is my ([wjd](https://github.com/williamdemeo)) version of the
+[fpinscala repository](https://github.com/fpinscala/fpinscala).
+I created it when working through the exercises in the book
+"Functional Programming in Scala", so it contains my solutions,
+along with some test code to check that my answers are correct.
 
 For the [original version](#original-readme-file) scroll down, or go to
 the original fpinscala git repository at the url above.)
