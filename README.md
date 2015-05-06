@@ -1,14 +1,21 @@
+## my_fpinscala
+
 This is my ([wjd](https://github.com/williamdemeo)) version of the fpinscala
-repository.  I've created it while working through the book
+repository.  I created it while working through the book
 "Functional Programming in Scala", so it contains my solutions to exercises in
 that book, along with test code to check the answers.
-
-The first part of this README file contains my notes on how to get started with
-the fpinscala repository in order to work on the exercises in Eclipse.
 
 For the [original version](#original-readme-file) scroll down, or go to
 the original fpinscala git repository at the url above.)
 
+The first section of this README file contains my notes on how to get started 
+working on the exercises in Eclipse.  It was slightly non-trivial to set this up
+so that I could use some libraries for testing my solutions to the exercises, so
+the notes below record the steps that worked.
+
+------------------------------------
+
+### Getting Started with fpinscala in Eclipse
 
 To get started with the exercises in the book in the Eclipse IDE,
 I followed these steps:
