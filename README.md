@@ -6,8 +6,8 @@ I created it when working through the exercises in the book
 "Functional Programming in Scala", so it contains my solutions,
 along with some test code to check that my answers are correct.
 
-For the [original version](#original-readme-file) scroll down, or go to
-the original fpinscala git repository at the url above.)
+(For the [original README file](#original-readme-file) scroll down, or go to
+the original [fpinscala git repository](https://github.com/fpinscala/fpinscala).)
 
 The first section of this README file contains my notes on how to get started 
 working on the exercises in Eclipse.  It was slightly non-trivial to set this up
@@ -18,23 +18,23 @@ the notes below record the steps that worked.
 
 ### Getting Started with fpinscala in Eclipse
 
-To get started with the exercises in the book in the Eclipse IDE,
-I followed these steps:
+To get started solving the exercises in the book "Functional Programming in Scala"
+using the Eclipse IDE, I followed these steps:
 
 1. Clone the [fpinscala repository](https://github.com/fpinscala/fpinscala)
-   onto local drive:
+   to my local drive:
 
         git clone git@github.com:fpinscala/fpinscala.git
 
-2. Create a new repository called my_fpinscala in my own GitHub account, set
-   the remote url of my cloned copy of fpinscala to point to this new repo,
-   and push the files to the new repo:
+2. Create a new repository called my_fpinscala in my GitHub account, set
+   the remote url of my copy of fpinscala to point to my new repo,
+   and push the files:
 
         git remote set-url origin git@github.com:williamdemeo/my_fpinscala.git
 		git push -u origin master
 		
 
-3. Now we need to prepare the project to be imported into Eclipse.
+3. Prepare the project files to be imported into Eclipse.
 
    The first step is to make sure the Scala build tool (sbt) is installed with
    the right plugins and libraries. (I already had sbt installed, so just need
