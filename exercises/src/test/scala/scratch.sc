@@ -85,6 +85,4 @@ object scratch {
 	// Test for Exercise 3.23: zipWith_first_try
 	zipWith(List(1,2,3), List(4,5,6))(_+_)    //> res23: fpinscala.datastructures.List[Int] = Cons(5,Cons(7,Cons(9,Nil)))
 	
-	
-	
 }
