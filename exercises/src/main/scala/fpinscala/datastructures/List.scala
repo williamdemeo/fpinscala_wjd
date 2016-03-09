@@ -77,8 +77,6 @@ object List { // `List` companion object. Contains functions for creating and wo
     case Cons(h, t) =>  Cons(h, init(t))
   }
   
-  // Exercise 3.6: init_tr
-  // Take all but the last element of a list, dropping the last.
   // (tail-recursive version)
   def init_tr[A](l: List[A]): List[A] = {
     def init_aux(xs: List[A], acc: List[A]): List[A] = xs match {
@@ -153,7 +151,11 @@ object List { // `List` companion object. Contains functions for creating and wo
   // Its runtime should be linear in the total length of all lists.
   def flatten[A](ll: List[List[A]]): List[A] = foldRight(ll, Nil:List[A])(append(_,_))
 
+  // Exercise 3.16: write a function 
   // Exercise 3.17: write a function that turns each value in a List[Double] into a String.
+  // you can use d.toString to turn `d:Double` to a String.
+  //def to_string(dl:List[Double]) : List[String] =
+  
   
   // Exercise 3.18: write a function `map` that generalizes modifying each element in a list while 
   // maintaining the structure of the list.

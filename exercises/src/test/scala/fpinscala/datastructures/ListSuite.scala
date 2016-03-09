@@ -46,7 +46,7 @@ object ListTests extends Properties("List") {
     length(mylist) - 1 == length(drop(mylist,1))
   }
   property("random drop length") = forAll(genListInt) { pair =>
-    if (length(pair._1)> pair._2) {
+    if (length(pair._1) != pair._2) {
       println("length(l) = " + length(pair._1) + "    n = " + pair._2)
       length(pair._1) - pair._2 == length(drop(pair._1,pair._2))
     }

@@ -15,7 +15,7 @@ object scratch {
   //                 case Nil => Nil
   //                 case Cons(x,xs) => Cons(x,xs)
 
-  // Test for Exercise 3.9:
+  // Test for Exercise 3.9
 	def length_fr[A](l: List[A]): Int =
 		foldRight(l, 0)((x,y) => 1+y)     //> length_fr: [A](l: fpinscala.datastructures.List[A])Int
 		
