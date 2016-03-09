@@ -1,4 +1,4 @@
-## my_fpinscala
+## fpinscala_wjd
 
 This is my ([wjd](https://github.com/williamdemeo)) version of the
 [fpinscala repository](https://github.com/fpinscala/fpinscala).
@@ -26,11 +26,12 @@ using the Eclipse IDE, I followed these steps:
 
         git clone git@github.com:fpinscala/fpinscala.git
 
-2. Create a new repository called my_fpinscala in my GitHub account, set
-   the remote url of my copy of fpinscala to point to my new repo,
-   and push the files:
+2. Create a new repository called ~my_fpinscala~ fpinscala_wjd in my 
+   GitHub account, set the remote url of my copy of fpinscala to point 
+   to my new repo, and push the files:
 
-        git remote set-url origin git@github.com:williamdemeo/my_fpinscala.git
+        ~git remote set-url origin git@github.com:williamdemeo/my_fpinscala.git~
+        git remote set-url origin git@github.com:williamdemeo/fpinscala_wjd.git		
 		git push -u origin master
 		
 
@@ -58,9 +59,9 @@ using the Eclipse IDE, I followed these steps:
 
      (These commands must be separated by blank lines, as shown above.)
 
-   - Enter the my_fpinscala directory and execute the following:
+   - Enter the ~my_fpinscala~ fpinscala_wjd directory and execute the following:
 
-            ~/git/Scala/fpinscala$ sbt
+            ~/git/PROGRAMMING/Scala/fpinscala_wjd$ sbt
             > project exercises
             > compile
     		> eclipse
@@ -69,7 +70,7 @@ using the Eclipse IDE, I followed these steps:
      code, and then generates Eclipse files necessary to import the project into
      Eclipse.
 
-5. Finally, we can import projects into Eclipse:
+4. Finally, we can import projects into Eclipse:
 
         File --> Import --> Git --> Projects From Git --> etc.
 
