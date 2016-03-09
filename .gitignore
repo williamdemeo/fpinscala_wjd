@@ -10,3 +10,5 @@ project.vim
 .project
 .classpath
 .metadata/
+.cache-main
+.cache-tests
