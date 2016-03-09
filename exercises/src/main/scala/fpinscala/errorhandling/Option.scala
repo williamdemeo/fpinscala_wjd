@@ -4,16 +4,58 @@ package fpinscala.errorhandling
 import scala.{Option => _, Some => _, Either => _, _} // hide std library `Option`, `Some` and `Either`, since we are writing our own in this chapter
 
 sealed trait Option[+A] {
-  def map[B](f: A => B): Option[B] = sys.error("todo")
+  
+  // map := take f:A=>B and a:Option[A] and return
+  // None if not Some(a), otherwise return Some(f(a))
+  // (Use this when f is total (defined for all a:A).)
+  def map[B](f: A => B): Option[B] = this match {
+    case None => None
+    case Some(a) => Some(f(a)) 
+  }
 
-  def getOrElse[B>:A](default: => B): B = sys.error("todo")
+  // getOrElse := take d:B and a:Option[A] and return
+  // d if not Some(a), otherwise return a.
+  def getOrElse[B>:A](default: => B): B = this match {
+    case None => default
+    case Some(a) => a
+  }
 
-  def flatMap[B](f: A => Option[B]): Option[B] = sys.error("todo")
+  // flatMap := take f:A=>Option[B] and a:Option[A] and return
+  // None if not Some(a), otherwise return Some(f(a)) 
+  def flatMap[B](f: A => Option[B]): Option[B] =  map(f) getOrElse(None)
+  // N.B. this is a "flattening" map only in the sense that map takes f:A=>B, 
+  // whereas flatMap takes f:A=>Option[B]; both return type Option[B].
+  // If we had tried to define flatMap as simply map(f), we get a type error
+  // because then the return type would be Option[Option[B]].
+  
+  // we can also implement `flatMap` with explicit pattern matching 
+  // (which seems much clearer to me).
+  def flatMap_pm[B](f: A => Option[B]): Option[B] = this match {
+    case None => None
+    case Some(a) => f(a)
+  }
+  
+  def orElse[B>:A](ob: => Option[B]): Option[B] = map(Some(_)) getOrElse(ob) 
 
-  def orElse[B>:A](ob: => Option[B]): Option[B] = sys.error("todo")
+  def orElse_pm[B>:A](ob: => Option[B]): Option[B] = this match {
+    case None => ob
+    case Some(a) => Some(a)
+  }
+  
+  // filter := return Some(a) if f(a) true, else return None
+  def filter_pm(f: A => Boolean): Option[A] = this match {
+    case Some(a) => if (f(a)) Some(a) else None
+    case _ => None 
+  }
+  // pm provides, as usual, the implementation that is easiest to interpret
+  
+  // we could have defined filter in terms of map
+  def filter_with_map(f: A => Boolean): Option[A] = if (this map(f) getOrElse(false)) this else None 
 
-  def filter(f: A => Boolean): Option[A] = sys.error("todo")
+  // or in terms of flatmap
+  def filter_with_flatmap(f: A => Boolean): Option[A] = flatMap(a => if (f(a)) Some(a) else None)
 }
+
 case class Some[+A](get: A) extends Option[A]
 case object None extends Option[Nothing]
 

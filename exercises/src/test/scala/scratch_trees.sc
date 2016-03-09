@@ -19,7 +19,7 @@ object scratch_trees {
 	maximum(my_tree)                          //> res4: Int = 2
 	maximum(my_tree2)                         //> res5: Int = 3
 	size(my_tree2)                            //> res6: Int = 5
-	size_with_fold(my_tree2)                  //> res7: Int = 4
+	size_with_foldLeft(my_tree2)              //> res7: Int = 5
 	size(my_tree3)                            //> res8: Int = 7
-	size_with_fold(my_tree3)                  //> res9: Int = 5
+	size_with_foldLeft(my_tree3)              //> res9: Int = 7
 }
