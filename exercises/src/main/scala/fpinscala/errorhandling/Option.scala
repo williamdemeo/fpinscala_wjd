@@ -101,10 +101,9 @@ object Option {
     if (xs.isEmpty) None
     else Some(xs.sum / xs.length)
 
-  // (used hint from answers)  
   def variance(xs: Seq[Double]): Option[Double] =
        mean(xs).flatMap (m => mean(xs.map(x => math.pow(x-m,2))))
-    
+
   def lift[A,B](f: A => B): Option[A] => Option[B] = _ map(f)
 
   // worked on this for a while, trying to be fancy, then realized a 
@@ -114,26 +113,56 @@ object Option {
     case (_,_) => None
   }
   
-  // Here's the slick (obfuscated) way to do it (from the answers):
+  // Here's the slick (obfuscated) way to do it:
   def map2_second_try[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] =
-    a flatMap (aa => b map (bb => f(aa, bb)))
+    a flatMap (aa => b map (bb => f(aa,bb)))
+    
   // Explanation: map has type signature `Option[A] => (A => B) => Option[B]`
   //    the function f: (A,B) => C is ordinary (total) function, but 
   //    arguments passed to it in this example may be None's.
   // OTOH, flatMap has type signature `Option[A] => (A => Option[B]) => Option[B]`
-
-  // Here's a modified lifting function that could be used to give yet another version
-  // of map2 (though this mere abstracts the essential idea of the second_try solution)    
-  def lift3[A,B,C](f: (A,B) => C) : (Option[A], Option[B]) => Option[C] = { 
+  // We need flatMap here because the return type of the function
+  //     aa => b map (bb => f(aa,bb)) 
+  // is already Option[C]
+  
+  // Here's a modified lifting function that works for binary functions.
+  def lift2[A,B,C](f: (A,B) => C) : (Option[A], Option[B]) => Option[C] = { 
     (a,b) => a flatMap (aa => b map (bb => f(aa,bb)))
   }
+  // lift2 can be used to give yet another version of map2 
+  // (this merely abstracts the essence of the second_try solution above)    
 
   //def map2_third_try[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C): Option[C] = lift3(f)(a,b)
-  def map2_third_try[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C) = lift3(f)(a,b)
+  def map2_third_try[A,B,C](a: Option[A], b: Option[B])(f: (A, B) => C) = lift2(f)(a,b)
+
+  // This one is harder (had to peek at answers)
+  def sequence[A](a: List[Option[A]]): Option[List[A]] = a match {
+    case Nil => Some(Nil)
+    case h::t => h flatMap (hh => sequence(t) map (hh::_))
+  }
+
+  // The answers suggest it can be done with foldRight and map2. Let's try it.
+  def sequence_second_try[A](a: List[Option[A]]): Option[List[A]] = 
+    a.foldRight[Option[List[A]]](Some(Nil))((x,y) => map2(x,y)( _::_ ))
+
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
+    case Nil => Some(Nil)
+    case h::t => f(h) match {
+      case None => None
+      case Some(y) => Some(y) flatMap (y => traverse(t)(f) map (y::_))
+    }
+  }
+
+  // cleaner version:
+  def traverse_second_try[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
+    case Nil => Some(Nil)
+    case h::t => map2(f(h),traverse_second_try(t)(f))(_ :: _)
+  }
+  
+  // book's alternative answer:
+  def traverse_1[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+    a.foldRight[Option[List[B]]](Some(Nil))((h,t) => map2(f(h),t)(_ :: _))
+
+
     
-
-  def sequence[A](a: List[Option[A]]): Option[List[A]] = sys.error("todo") 
-
-
-  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = sys.error("todo")
 }
