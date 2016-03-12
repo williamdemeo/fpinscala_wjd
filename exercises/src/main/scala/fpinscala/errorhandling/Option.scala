@@ -10,8 +10,8 @@ sealed trait Option[+A] {
   //        -- None if not Some(a), 
   //        -- Some(f(a)) otherwise
   def map[B](f: A => B): Option[B] = this match {
-    case None => None
     case Some(a) => Some(f(a)) 
+    case _ => None
   }
   // N.B. the Option[A] argument type appears because map is applied to `this`
   //  
@@ -27,8 +27,8 @@ sealed trait Option[+A] {
   //       -- a if Some(a),
   //       -- d otherwise.
   def getOrElse[B>:A](default: => B): B = this match {
-    case None => default
     case Some(a) => a
+    case _ => default
   }
   // IMPORTANT: the type annotation `default: => B` means that the
   // argument named `default` is passed using call-by-name evaluation. 
@@ -38,18 +38,21 @@ sealed trait Option[+A] {
   // flatMap[B] takes an Option[A] and a A => Option[B] and returns
   //        -- None if not Some(a), 
   //        -- f(a) otherwise
-  def flatMap[B](f: A => Option[B]): Option[B] =  map(f) getOrElse(None)
-  // The function `f: A => Option[B]` passed to flatMap can fail.
-  // This is a "flattening" map because it takes f:A=>Option[B];
-  // If we had tried to define flatMap as simply map(f), we get a type error
-  // because then the return type would be Option[Option[B]].
-  
-  // we can also implement `flatMap` with explicit pattern matching 
-  // (which seems much clearer to me).
+  // we first try the simpler pm implementation:
   def flatMap_pm[B](f: A => Option[B]): Option[B] = this match {
-    case None => None
     case Some(a) => f(a)
+    case _ => None
   }
+
+  // now for the implementation that uses map and getOrElse:
+  def flatMap[B](f: A => Option[B]): Option[B] =  map(f) getOrElse(None)
+  // Notice that since `f: A => Option[B]`, if x:Option[A], then
+  // x map(f): Option[Option[B]].  But we want to return an Option[B],
+  // so we must unravel it one level with getOrElse.
+  // This is a "flattening" because it composes two things, both of which
+  // can fail---the "this" and the function evaluation f(Some(a))---and
+  // instead of returning Option[Option[B]], it just returns Option[B],
+  // (hence, flattening).
   
   // orElse: Type B => Option[A] => Option[B] => Option[B]
   // orElse[B] takes this a: Option[A] and ob:Option[B] and returns
@@ -58,8 +61,8 @@ sealed trait Option[+A] {
   def orElse[B>:A](ob: => Option[B]): Option[B] = map(Some(_)) getOrElse(ob) 
 
   def orElse_pm[B>:A](ob: => Option[B]): Option[B] = this match {
-    case None => ob
     case Some(a) => Some(a)
+    case _ => ob
   }
   
   // filter := return Some(a) if f(a) true, else return None
