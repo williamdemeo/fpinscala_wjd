@@ -40,6 +40,70 @@ val absO: Option[Double] => Option[Double] = lift(math.abs)
 //   2. R(x)(y) = 1 ==> R(y)(x) = 1
 //   3. R(x)(y) = 1 and R(y)(z) = 1 ==> R(x)(z) = 1
 
+/**
+*Thunk*
+We can pass an argument (say, `expr`) to a function using call-by-name
+instead of call-by-value, so that `expr` isn't automatically evaluated.
+Instead, evaluation of `expr` is delayed until we need it.  Suppose,
+for example, we want to pass some expression that will evaluate to
+an Int. Instead of specifying the signature of our function to accept
+an Int argument, we will specify that it accepts a function argument of
+type () => Int.  The result is that the thing passed in will be
+evaluated using call-by-name instead of call-by-value.
+*/
+// Example
 
+def maybeTwice(b: Boolean, delayedInt: () => Int) = if(b) delayedInt() + delayedInt() else 0
+                                                  //> maybeTwice: (b: Boolean, delayedInt: () => Int)Int
+
+// If we call this function as follows,
+
+val x = maybeTwice(true, () => { println("hi (twice)"); 1+41 } )
+                                                  //> hi (twice)
+                                                  //| hi (twice)
+                                                  //| x  : Int = 84
+/**
+In general, the unevaluated form of an expression is called a *thunk*.
+
+This has an analog in universal algebra.  We often want to single out
+special elements of the universe and include them in the set of basic
+operations of the algebra. This is done by identifying such elements with
+constant, or "nullary", functions.  For example, in an additive group,
+(A, {+, -, 0}), we have the binary addition operation +: A x A => A,
+the unary inverse operation -: A => A, and the additive identity element
+0 is a nullary operation, 0: () => A. Thus, the additive identity plays a
+dual role. It is both an element of the universe and a basic operation,
+specifically a unary operation, which is a function of type () => A.
+
+In Scala, this is so common that there is simpler syntax for it. We can
+leave out the empty parens: */
+
+def maybeTwice_sugared(b: Boolean, delayedInt: => Int) = if(b) delayedInt + delayedInt else 0
+                                                  //> maybeTwice_sugared: (b: Boolean, delayedInt: => Int)Int
+
+// When we call the function, we also drop `() =>`:
+
+val y = maybeTwice_sugared(true, { println("hi (twice)"); 1+41 } )
+                                                  //> hi (twice)
+                                                  //| hi (twice)
+                                                  //| y  : Int = 84
+
+
+
+/** Sometimes we want to delay evaluation, but we also don't want to
+(inefficiently) reevaluate the expression each time we need it. For this
+we use the `lazy` keyword: */
+
+def maybeTwice_smarter(b: Boolean, delayedInt: => Int) = {
+ 	if (b) {
+ 		lazy val j = delayedInt
+ 		j+j
+ 	}
+ 	else 0
+ }                                                //> maybeTwice_smarter: (b: Boolean, delayedInt: => Int)Int
+	
+val z = maybeTwice_smarter(true, { println("hi (once)"); 1+41 } )
+                                                  //> hi (once)
+                                                  //| z  : Int = 84
 
 }
