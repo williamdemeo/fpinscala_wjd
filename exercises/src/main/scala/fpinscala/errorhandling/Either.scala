@@ -1,25 +1,26 @@
 package fpinscala.errorhandling
 
-
-import scala.{Option => _, Either => _, Left => _, Right => _, _} // hide std library `Option` and `Either`, since we are writing our own in this chapter
+// Hide std library `Option` and `Either`, 
+// since we are writing our own in this chapter
+// NB: in answers they leave `Left => _, Right => _` out of the mask.
+import scala.{Option => _, Either => _, Left => _, Right => _, _} 
 
 sealed trait Either[+E,+A] {
 
-  // Here are the pm versions:
   def map[B](f: A => B): Either[E, B] = this match {
     case Left(e) => Left(e)
     case Right(a) => Right(f(a))
-  }
+  } // correct: (same as answers)
 
   def flatMap[EE >: E, B](f: A => Either[EE, B]): Either[EE, B] = this match {
     case Left(e) => Left(e)
     case Right(a) => f(a)
-  }
+  } // correct: (same as answers)
 
   def orElse[EE >: E, B >: A](b: => Either[EE, B]): Either[EE, B] = this match {
     case Left(_) => b
     case Right(a) => Right(a)
-  }
+  } // correct: (same as answers)
 
   def map2[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): Either[EE, C] = 
   	this match {
@@ -28,8 +29,26 @@ sealed trait Either[+E,+A] {
       	case Left(e) => Left(e)
       	case Right(b) => Right(f(a,b))
     	}
-  	}
+  	} // this may be correct, but in answers they use a for-comprehension
+		  // as follows:
 
+  def map2_with_for[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): 
+  	Either[EE, C] = 
+  		for { 
+  			aa <- this 
+  			bb <- b 
+  		} yield f(aa, bb)
+  	
+	  // The for-comprehension is explained on page 60 of fpinscala.
+  	// It is syntactic sugar for multiple flatMaps and one map. 
+  	// If there are n expressions of the form `a <-` the compiler 
+  	// desugars the for-comprehension to n-1 flatMaps and one final map.
+  	// For example, the function map2_with_for above becomes 
+  def map2_desugared[EE >: E, B, C](b: Either[EE, B])(f: (A, B) => C): Either[EE, C] = 
+  	this flatMap (aa =>	
+  	b	map (bb => 
+  	f(aa,bb) ))
+  	
   // Why no getOrElse this time?  Maybe it's less useful in the Either 
   // trait than it is in the Option trait.
   def getOrElse[EE >: E, B >: A](b: => B): B = this match {
@@ -44,15 +63,17 @@ case class Right[+A](get: A) extends Either[Nothing,A]
 object Either {
 
 	// I defined sequence first and then defined traverse in terms of sequence
-	def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): Either[E, List[B]] = 
-  	sequence(es map (f))
   def sequence[E,A](es: List[Either[E,A]]): Either[E,List[A]] = es match {
     case Nil => Right(Nil)
     case h::t => h flatMap (hh => sequence(t) map(hh::_))
   }
-  // alternative sequence implementation
+	// alternative sequence implementation
   def sequence_second_try[E,A](es: List[Either[E,A]]): Either[E,List[A]] = 
     es.foldRight[Either[E,List[A]]](Right(Nil))((x,y) => x.map2(y)(_::_))
+
+  def traverse[E,A,B](es: List[A])(f: A => Either[E, B]): 
+		Either[E, List[B]] = sequence(es map (f))
+
 
     
   // The book defines traverse first, and defines sequence via traverse:
