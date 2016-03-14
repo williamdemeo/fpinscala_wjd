@@ -10,55 +10,86 @@ package fpinscala.laziness
 import Stream._
 trait Stream[+A] {
 
-  def foldRight[B](z: => B)(f: (A, => B) => B): B = 
-  	// The arrow `=>` in front of the argument type `B` means that the function `f` 
-  	// takes its second argument by name and may choose not to evaluate it.
-    this match {
-      case Cons(h,t) => f(h(), t().foldRight(z)(f)) // If `f` doesn't evaluate its second argument, the recursion never occurs.
-      case _ => z
-    }
-
-  def exists(p: A => Boolean): Boolean = 
-    foldRight(false)((a, b) => p(a) || b) // Here `b` is the unevaluated recursive step that folds the tail of the stream. If `p(a)` returns `true`, `b` will never be evaluated and the computation terminates early.
-
-  @annotation.tailrec
-  final def find(f: A => Boolean): Option[A] = this match {
-    case Empty => None
-    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+	// Ex 5.1: Write a function to convert a Stream to a List, which will 
+	//         force its evaluation and let you look at it in the REPL. 
+	//         You can convert to the regular List type in the standard library. 
+	def toList: List[A] = this match {
+  	case Empty => Nil
+  	case Cons(h, t) => h() :: t().toList
   }
+  
+  // Ex 5.2: Write the function take(n) for returning the first n elements of  
+  //         a Stream, and drop(n) for skipping the first n elements of a Stream.
+  // 5.2a
   def take(n: Int): Stream[A] = (this, n) match {
   	case (Empty, _) => Empty
   	case (_, 0) => Empty
     case (Cons(h, t), m) => cons(h(), t().take(m-1))
 	}
-
+  // 5.2b
   def drop(n: Int): Stream[A] = (this, n) match {
   	case (Empty, _) => Empty
   	case (_, 0) => this
   	case (Cons(h, t), m) => t().drop(m-1) 
   }
 
+  // Ex 5.3: Write the function takeWhile for returning all *starting* elements 
+  //         of a Stream that match the given predicate.
   def takeWhile(p: A => Boolean): Stream[A] = this match {
   	case Empty => Empty
-  	case Cons(h,t) => if(p(h())) cons(h(), t() takeWhile(p))
-  										else t() takeWhile(p)	
+  	case Cons(h,t) => if(p(h())) cons( h(), t() takeWhile(p) ) else Empty
   }
 
-  // The name `takeIf` seems more appropriate than `takeWhile`.  
-  def takeIf(p: A => Boolean): Stream[A] = takeWhile(p)
-  
-  def forAll(p: A => Boolean): Boolean = sys.error("todo")
+  // My first implementation of takeWhile was wrong because I misread the spec.
+  // It would be more accurately described as `takeIf`, defined as follows:
+  def takeIf(p: A => Boolean): Stream[A] = this match {
+  	case Empty => Empty
+  	case Cons(h,t) => 
+  		if(p (h()) ) cons(h(), t() takeIf(p)) else t() takeIf(p)	
+  }
 
+  def foldRight[B](z: => B)(f: (A, => B) => B): B = 
+  	// The arrow `=>` in front of the argument type `B` means that the function `f` 
+  	// takes its second argument by name and may choose not to evaluate it.
+    this match {
+      case Cons(h,t) => f(h(), t().foldRight(z)(f)) 
+                        // If `f` doesn't evaluate its second argument, 
+                        // the recursion never occurs.
+      case _ => z
+    }
+
+  def exists(p: A => Boolean): Boolean = foldRight(false)((a, b) => p(a) || b) 
+    // Here `b` is the unevaluated recursive step that folds the tail of the stream. 
+    // If `p(a)` returns `true`, `b` will never be evaluated and the computation terminates early.
+
+  @annotation.tailrec
+  final def find(f: A => Boolean): Option[A] = this match {
+    case Empty => None
+    case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
+  }
+
+	// Ex 5.4: Implement forAll, which checks that all elements in the Stream 
+  //         match a given predicate. Your implementation should terminate the 
+  //         traversal as soon as it encounters a non-matching value.
+  def forAll_first_try(p: A => Boolean): Boolean = this match {
+  	case Empty => true
+  	case Cons(h, t) => if (p(h())) t() forAll(p) else false
+  }
+  def forAll(p: A => Boolean): Boolean = this match {
+  	case Empty => true
+    case Cons(h, t) => p(h()) && t().forAll(p)
+  }
+
+  // Ex 5.5: Use foldRight to implement takeWhile.
+  def forAll_with_fold(p: A => Boolean): Boolean = sys.error("todo")
+
+  // Ex 5.6: (Hard) Implement headOption using foldRight.
   def headOption: Option[A] = sys.error("todo")
 
-  def toList: List[A] = this match {
-  	case Empty => Nil
-  	case Cons(h, t) => h() :: t().toList
-  }
-  
-  
-  // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
-  // writing your own function signatures.
+
+  // Ex 5.7: Implement map, filter, append, and flatMap using foldRight. 
+  //         The append method should be non-strict in its argument.
+  //         (Part of the exercise is writing your own function signatures.)
 
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
 }
