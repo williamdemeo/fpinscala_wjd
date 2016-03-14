@@ -1,3 +1,10 @@
+// Authors: Paul Chiusano and Runar Bjarnason
+// Url: https://github.com/fpinscala/fpinscala 
+// 
+// Exercises in this file were solved by williamdemeo@gmail.com.
+// The solutions may be imperfect. Authoritative solutions are provided by 
+// Chiusano and Bjarnason at the github repository cited above.
+
 package fpinscala.laziness
 
 import Stream._
@@ -21,7 +28,7 @@ trait Stream[+A] {
   }
   def take(n: Int): Stream[A] = (this, n) match {
   	case (Empty, _) => Empty
-  	case (_, 0) => this
+  	case (_, 0) => Empty
     case (Cons(h, t), m) => cons(h(), t().take(m-1))
 	}
 
@@ -37,6 +44,9 @@ trait Stream[+A] {
   										else t() takeWhile(p)	
   }
 
+  // The name `takeIf` seems more appropriate than `takeWhile`.  
+  def takeIf(p: A => Boolean): Stream[A] = takeWhile(p)
+  
   def forAll(p: A => Boolean): Boolean = sys.error("todo")
 
   def headOption: Option[A] = sys.error("todo")

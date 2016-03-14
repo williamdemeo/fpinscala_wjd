@@ -1,3 +1,10 @@
+// Authors: Paul Chiusano and Runar Bjarnason
+// Url: https://github.com/fpinscala/fpinscala 
+// 
+// Exercises in this file were solved by williamdemeo@gmail.com.
+// The solutions may be imperfect. Authoritative solutions are provided by 
+// Chiusano and Bjarnason at the github repository cited above.
+
 package fpinscala.datastructures
 
 sealed trait List[+A] // `List` data type, parameterized on a type, `A`
