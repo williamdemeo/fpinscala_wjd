@@ -30,6 +30,7 @@ trait Stream[+A] {
 	}
 	// We could avoid the need for reverse by using a mutable list buffer. (See solutions.)
 	
+	
   // Ex 5.2: Write the function take(n) for returning the first n elements of  
   //         a Stream, and drop(n) for skipping the first n elements of a Stream.
   // 5.2a
@@ -39,6 +40,8 @@ trait Stream[+A] {
   	case _ => Empty
 	}
   
+ 
+  
   // 5.2b: (If we declare a public function tailrec, we must mark it `final`
   //       so it can't be overwritten.)
   @annotation.tailrec
@@ -47,6 +50,7 @@ trait Stream[+A] {
   	case _ => this
   }
 
+  
   // Ex 5.3: Write the function takeWhile for returning all *starting* elements 
   //         of a Stream that match the given predicate.
   def takeWhile(p: A => Boolean): Stream[A] = this match {
@@ -54,6 +58,7 @@ trait Stream[+A] {
   	case _ => Empty
   }
 
+  
   // My first implementation of takeWhile was wrong because I misread the spec.
   // It would be more accurately described as `takeIf`, defined as follows:
   def takeIf(p: A => Boolean): Stream[A] = this match {
@@ -61,6 +66,7 @@ trait Stream[+A] {
   	case _ => Empty
   }
 
+  
   // exists with explicit recursion (p. 70) 
   def exists_first_try(p: A => Boolean): Boolean = this match {
     case Cons(h, t) => p(h()) || t().exists_first_try(p)
@@ -89,6 +95,7 @@ trait Stream[+A] {
   // forAll with general recursion (using foldRight)
   def forAll(p: A => Boolean): Boolean = foldRight(true)((a,b) => p(a) && b)
     
+  
   def foldRight[B](z: => B)(f: (A, => B) => B): B = this match { 
   	// The arrow `=>` in front of the argument type `B` means that the function `f` 
   	// takes its second argument by name and may choose not to evaluate it.
@@ -96,13 +103,19 @@ trait Stream[+A] {
     // If `f` doesn't evaluate its second argument, the recursion never occurs.
     case _ => z
   }
-    
+ 
+  
   // Ex 5.5: Use foldRight to implement takeWhile.
-  def takeWhile_with_fold(p: A => Boolean): Stream[A] = 
+  def takeWhile_with_foldRight(p: A => Boolean): Stream[A] = 
     foldRight[Stream[A]](Empty)( (a,b) => {if(p(a)) cons(a, b) else Empty} )
 
+    
   // Ex 5.6: (Hard) Implement headOption using foldRight.
-  def headOption: Option[A] = sys.error("todo")
+  def headOption_first_try: Option[A] = this match {
+    case Empty => None
+    case Cons(h,t) => Some(h())
+  }
+  def headOption: Option[A] = foldRight(None: Option[A])((h,_) => Some(h))
 
 
   // Ex 5.7: Implement map, filter, append, and flatMap using foldRight. 
