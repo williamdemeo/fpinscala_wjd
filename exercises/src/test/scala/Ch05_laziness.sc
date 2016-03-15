@@ -76,4 +76,29 @@ object Chapter05_scratch {
 	//	ones.exists(_ == 0)  // results in  java.lang.StackOverflowError
   
   
+  //---- map and filter tests -------------------------------------------------------------
+  Stream(1,2,3,4).map(_ + 10).filter(_ % 2 == 0).toList
+                                                  //> res32: List[Int] = List(12, 14)
+ 
+ 	val zeros = ones.map(_ - 1)               //> zeros  : fpinscala.laziness.Stream[Int] = Cons(<function0>,<function0>)
+ 	// three zeros followed by 7 ones:
+ 	zeros.take(3).append(ones).take(10).toList//> res33: List[Int] = List(0, 0, 0, 1, 1, 1, 1, 1, 1, 1)
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+  
 }

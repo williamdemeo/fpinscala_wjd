@@ -162,6 +162,7 @@ trait Stream[+A] {
   
   // flatMap (with foldRight)
   def flatMap[B](f: A => Stream[B]): Stream[B] = foldRight(empty[B])((x,y) => f(x) append y)
+  // checked (same as official solution)
       
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
 
