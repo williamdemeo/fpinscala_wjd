@@ -80,17 +80,21 @@ object Chapter05_scratch {
   Stream(1,2,3,4).map(_ + 10).filter(_ % 2 == 0).toList
                                                   //> res32: List[Int] = List(12, 14)
  
+ 	//---- miscellaneous examples -----------------------------------------------------------
  	val zeros = ones.map(_ - 1)               //> zeros  : fpinscala.laziness.Stream[Int] = Cons(<function0>,<function0>)
  	// three zeros followed by 7 ones:
- 	zeros.take(3).append(ones).take(10).toList//> res33: List[Int] = List(0, 0, 0, 1, 1, 1, 1, 1, 1, 1)
+	zeros.take(3).append(ones).take(10).toList//> res33: List[Int] = List(0, 0, 0, 1, 1, 1, 1, 1, 1, 1)
+
+	fibs.take(7).toList                       //> res34: List[Int] = List(0, 1, 1, 2, 3, 5, 8)
+	 	
+  fibs_with_unfold.take(7).toList                 //> res35: List[Int] = List(0, 1, 1, 2, 3, 5, 8)
+ 
+  from_with_unfold(7).take(3).toList              //> res36: List[Int] = List(8, 9, 10)
+ 
+ 	constant_with_unfold(2).take(5).toList    //> res37: List[Int] = List(2, 2, 2, 2, 2)
  
  
- 
- 
- 
- 
- 
- 
+ 	ones_with_unfold.take(5).toList           //> res38: List[Int] = List(1, 1, 1, 1, 1)
  
  
  
