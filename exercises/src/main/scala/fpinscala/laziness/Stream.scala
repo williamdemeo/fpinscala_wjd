@@ -116,12 +116,53 @@ trait Stream[+A] {
     case Cons(h,t) => Some(h())
   }
   def headOption: Option[A] = foldRight(None: Option[A])((h,_) => Some(h))
+  // copied from official solution
 
 
   // Ex 5.7: Implement map, filter, append, and flatMap using foldRight. 
   //         The append method should be non-strict in its argument.
   //         (Part of the exercise is writing your own function signatures.)
-
+  //
+  // map (pm version)
+  def map_pm[B](f: A => B):Stream[B] = this match {
+    case Cons(h,t) => cons( f(h()), t().map_pm(f) )
+    case _ => empty[B]
+  }
+  //  
+  // map (with foldRight)
+  def map[B](f: A => B): Stream[B] = foldRight(empty[B])((x,y) => cons(f(x),y))
+  // checked (same as official solution)
+  
+  // filter (pm version)
+  def filter_pm(p: A => Boolean): Stream[A] = this match {
+    case Cons(h,t) => if( p(h()) ) cons( h(), t().filter_pm(p) ) else t().filter_pm(p)
+    case _ => empty[A]
+  }
+  
+  // filter (with foldRight)
+  def filter(p: A => Boolean): Stream[A] = 
+    foldRight(empty[A])( (x,y) => if(p(x)) cons(x,y) else y ) 
+  // checked (same as official solution)
+    
+  // append (pm version)
+  def append_pm[B>:A](s: Stream[B]): Stream[B] = this match {
+    case Empty => s
+    case Cons(h,t) => cons(h(), t().append_pm(s)) 
+  }
+  
+  // append (with foldRight)
+  def append[B>:A](s: Stream[B]): Stream[B] = foldRight(s)((x,y) => cons(x,y))
+  // checked (same as official solution)
+  
+  // flatMap (pm version)
+  def flatMap_pm[B>:A](f: A => Stream[B]): Stream[B] = this match {
+    case Cons(h,t) => f(h()) append t().flatMap(f)
+    case _ => Empty
+  }
+  
+  // flatMap (with foldRight)
+  def flatMap[B](f: A => Stream[B]): Stream[B] = foldRight(empty[B])((x,y) => f(x) append y)
+      
   def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
 
   @annotation.tailrec
