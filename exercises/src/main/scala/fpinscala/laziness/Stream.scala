@@ -218,7 +218,7 @@ trait Stream[+A] {
   // It takes two lists and a binary function and returns the list consisting of 
   // the result of applying the function to each pair of elements from the lists.
   // Here's the signature:
-  //    def zipWith_first_try[A,B,C](a: List[A], b: List[B])(f: (A, B) => C): List[C]
+  //    def zipWith[A,B,C](a: List[A], b: List[B])(f: (A, B) => C): List[C]
   //
   //---- zipWith (via unfold) ---------------------------------------------
   def zipWith[B,C](b: Stream[B])(f: (A, B) => C): Stream[C] = unfold((this,b)) { 
@@ -236,20 +236,41 @@ trait Stream[+A] {
     case (         _  , Cons(bh,bt) ) => Some( (     None , Some(bh())), (empty,  bt()) )
     case _ => None
   }
-
-  // Ex 5.14 (hard) Implement startsWith using functions you’ve written. 
+  
+  // Ex 5.14 (hard) Implement startsWith using functions you've written. 
   // It should check if one Stream is a prefix of another. For instance, 
-  // Stream(1,2,3) startsWith Stream(1,2) would be true .
-  def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+  // Stream(1,2,3) startsWith Stream(1,2) would be true.
+  //
+  def startsWith_first_try[B](s: Stream[B]): Boolean = zipWith(s)(_ == _).foldRight(true)(_ && _)
+  // This doesn't work when `this` ends before s.
+  //
+  def startsWith_second_try[B](s: Stream[B]): Boolean =	zipAll(s).map{
+  		case (Some(x), Some(y)) => x==y
+  		case (_, None) => true
+  		case _ => false
+  	}.foldRight(true)(_ && _)
+  // This works, but it's not as pretty as the official solution below.
+ 	//
+	def startsWith[A](s: Stream[A]): Boolean = 
+		zipAll(s).takeWhile(!_._2.isEmpty) forAll { case (h,h2) => h == h2 }
 
   // Ex 5.15 Implement tails using unfold. For a given Stream, tails returns the 
   // Stream of suffixes of the input sequence, starting with the original Stream. 
   // For example, given Stream(1,2,3), it would return 
   // Stream(Stream(1,2,3), Stream(2,3), Stream(3), Stream()) .
-  def tails: Stream[Stream[A]] = sys.error("todo")
+  def tails: Stream[Stream[A]] = unfold(this) {
+    case Cons(h,t) => Some( (Cons(h,t), t()) )
+  	case _ => None
+  } append Stream(empty)
 
-  // Implement hasSubsequence using startsWith and tails.
-  def hasSubsequence[A](s2: Stream[A]): Boolean = sys.error("todo")
+  // Implement hasSubsequence using startsWith and tails.  NB we are not asking 
+  // if s2 is a true subsequence of `this` in the mathematical sense. That's harder.  
+  // Instead, we simply want to check if s2 appears as a *contiguous* substring 
+  // of `this`.  (Calling this a "subsequence" seems misleading to a mathematician.)
+  def hasSubsequence[A](s2: Stream[A]): Boolean = tails exists (_ startsWith(s2))
+  // For example, in this implementation, 
+  //     Stream(1,2,3) hasSubsequence(Stream(1,3)) 
+  // returns false, even though (1,3) is a subsequence of (1,2,3).
   
   // Ex 5.16 (hard) Generalize tails to the function scanRight, which is like a 
   // foldRight that returns a stream of the intermediate results. For example:
@@ -260,9 +281,10 @@ trait Stream[+A] {
   // This example should be equivalent to the expression List(1+2+3+0, 2+3+0, 3+0, 0). 
   // Your function should reuse intermediate results so that traversing a Stream with n
   // elements always takes time linear in n. Can it be implemented using unfold? How, or
-  // why not? Could it be implemented using another function we’ve written?
-  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[Stream[B]] = sys.error("todo")
-
+  // why not? Could it be implemented using another function we've written?
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[B] = tails.map(_.foldRight(z)(f))
+  // This solution seems to work, but it probably doesn't satisfy the requirement that
+  // the stream is traversed only once.
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
