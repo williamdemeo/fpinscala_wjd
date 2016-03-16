@@ -164,7 +164,6 @@ trait Stream[+A] {
   def flatMap[B](f: A => Stream[B]): Stream[B] = foldRight(empty[B])((x,y) => f(x) append y)
   // checked (same as official solution)
       
-  def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
 
   @annotation.tailrec
   final def find(f: A => Boolean): Option[A] = this match {
@@ -179,14 +178,18 @@ trait Stream[+A] {
   
   // (Exercises 5.8--5.12 are solved below in the Stream object.)
   // Ex 5.13 Use unfold to implement map, take, takeWhile, zipWith (see ch 3), and zipAll. 
-  // The zipAll function should continue the traversal as long as either stream has more 
-  // elements--it uses Option to indicate whether each stream has been exhausted.
+  // Recall, unfold's signature,
   //
-  //---- map (with unfold) ----------------------------------------
+  //    def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A]
+  //
+  // It takes an initial state z and a function that knows how to convert a state into
+  // Some(value, next state) or None.
+  //
+  //---- map (via unfold) ----------------------------------------
   def map_with_unfold_first_try[B](f: A => B): Stream[B] = 
     unfold(this) ( z => z match {
       case Cons(h,t) => Some( ( f(h()), t() ) ) 
-      case _ => None 
+      case _ => None // converted to empty stream by unfold.
     })
   // This is similar to official solution, but note that 
   //  z => z match { ... }  is unnecessary.
@@ -194,26 +197,72 @@ trait Stream[+A] {
   // as follows:
   def map_with_unfold[B](f: A => B): Stream[B] = unfold(this) {
     case Cons(h,t) => Some( ( f(h()), t() ) ) 
-    case _ => None 
+    case _ => None // converted to empty stream by unfold.
   }
   //    
-  //---- take (with unfold) -------------------------------------------
+  //---- take (via unfold) -------------------------------------------
   def take_with_unfold(n: Int): Stream[A] = unfold((this,n)) {
     case (Cons(h, t), 1) => Some((h(), (empty, 0)))
     case (Cons(h, t), n) if (n>0) => Some((h(), (t(), n-1))) 
-  	case _ => None
+  	case _ => None // converted to empty by unfold.
 	}
-  // checked (now correct; it was almost right, but forgot first case)
+  // checked (now correct; it was almost right, but I left off the first case)
   //
-  //---- takeWhile (with unfold) -------------------------------------------
-  def takeWhile_with_unfold(p: A => Boolean): Stream[A] = ???
-  
-  //---- zipWith (with unfold) ---------------------------------------------
-  // def zipWith[B,C] 
+  //---- takeWhile (via unfold) -------------------------------------------
+  def takeWhile_with_unfold(p: A => Boolean): Stream[A] = unfold(this) {
+    case Cons(h,t) if p(h()) => Some((h(),t()))
+    case _ => None // converted to empty stream by unfold.
+  }
 
-  //---- zipAll (with unfold) ---------------------------------------------- 
-  def zipAll[B](s2: Stream[B]): Stream[(Option[A],Option[B])] = ???
+  // Recall original zipWith function from Chapter 3 (Exercise 3.23): 
+  // It takes two lists and a binary function and returns the list consisting of 
+  // the result of applying the function to each pair of elements from the lists.
+  // Here's the signature:
+  //    def zipWith_first_try[A,B,C](a: List[A], b: List[B])(f: (A, B) => C): List[C]
+  //
+  //---- zipWith (via unfold) ---------------------------------------------
+  def zipWith[B,C](b: Stream[B])(f: (A, B) => C): Stream[C] = unfold((this,b)) { 
+    case ( Cons(ah,at), Cons(bh,bt) ) => Some( ( f(ah(),bh()), (at(), bt()) ) )
+    case _ => None
+  }
+  // checked (same as official solution)
   
+  //---- zipAll (with unfold) ---------------------------------------------- 
+  // The zipAll function should continue the traversal as long as either stream has more 
+  // elements--it uses Option to indicate whether each stream has been exhausted.
+  def zipAll[B](s2: Stream[B]): Stream[(Option[A],Option[B])] = unfold((this,s2)) { 
+    case ( Cons(ah,at), Cons(bh,bt) ) => Some( (Some(ah()), Some(bh())), ( at(),  bt()) )
+    case ( Cons(ah,at),         _   ) => Some( (Some(ah()),     None  ), ( at(), empty) )
+    case (         _  , Cons(bh,bt) ) => Some( (     None , Some(bh())), (empty,  bt()) )
+    case _ => None
+  }
+
+  // Ex 5.14 (hard) Implement startsWith using functions you’ve written. 
+  // It should check if one Stream is a prefix of another. For instance, 
+  // Stream(1,2,3) startsWith Stream(1,2) would be true .
+  def startsWith[B](s: Stream[B]): Boolean = sys.error("todo")
+
+  // Ex 5.15 Implement tails using unfold. For a given Stream, tails returns the 
+  // Stream of suffixes of the input sequence, starting with the original Stream. 
+  // For example, given Stream(1,2,3), it would return 
+  // Stream(Stream(1,2,3), Stream(2,3), Stream(3), Stream()) .
+  def tails: Stream[Stream[A]] = sys.error("todo")
+
+  // Implement hasSubsequence using startsWith and tails.
+  def hasSubsequence[A](s2: Stream[A]): Boolean = sys.error("todo")
+  
+  // Ex 5.16 (hard) Generalize tails to the function scanRight, which is like a 
+  // foldRight that returns a stream of the intermediate results. For example:
+  // 
+  //     scala> Stream(1,2,3).scanRight(0)(_ + _).toList
+  //     res0: List[Int] = List(6,5,3,0)
+  //
+  // This example should be equivalent to the expression List(1+2+3+0, 2+3+0, 3+0, 0). 
+  // Your function should reuse intermediate results so that traversing a Stream with n
+  // elements always takes time linear in n. Can it be implemented using unfold? How, or
+  // why not? Could it be implemented using another function we’ve written?
+  def scanRight[B](z: => B)(f: (A, => B) => B): Stream[Stream[B]] = sys.error("todo")
+
 }
 case object Empty extends Stream[Nothing]
 case class Cons[+A](h: () => A, t: () => Stream[A]) extends Stream[A]
@@ -268,9 +317,9 @@ object Stream {
   def unfold[A, S](z: S)(f: S => Option[(A, S)]): Stream[A] = 
     f(z) match {
       case Some((a,s)) => cons(a, unfold(s)(f))
-      case _ => Empty 
+      case None => empty 
     }
-  // checked (it works and is similar to official solution)
+  // checked (same as official solution)
     
   // Ex 5.12 Write fibs, from, constant, and ones in terms of unfold.
   //
@@ -300,6 +349,7 @@ object Stream {
    since it's extremely delicate and not tracked by the types. For instance, sharing is 
    destroyed when calling even `xs.map(x => x)`.
 	*/
+  
   
   
     

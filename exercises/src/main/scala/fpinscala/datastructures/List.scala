@@ -37,44 +37,64 @@ object List { // `List` companion object. Contains functions for creating and wo
     case _ => 101
   }
 
+  def sum2(ns: List[Int]) = foldRight(ns, 0)(_ + _)  
+  // `_ + _` is more concise notation for `(x,y) => x + y`
 
-  def sum2(ns: List[Int]) =
-    foldRight(ns, 0)(_ + _)  // `_ + _` is more concise notation for `(x,y) => x + y`
+  def product2(ns: List[Double]) = foldRight(ns, 1.0)(_ * _) 
+  // `_ * _` is more concise notation for `(x,y) => x * y`
 
-  def product2(ns: List[Double]) =
-    foldRight(ns, 1.0)(_ * _) // `_ * _` is more concise notation for `(x,y) => x * y`
-
-
-  // Exercise 3.2: 
-  // Implement the function `tail` for removing the first element of a list    
-  def tail[A](l: List[A]): List[A] = l match {
+  // Ex 3.2 Implement the function `tail` for removing the first element of a list    
+  def tail_first_try[A](l: List[A]): List[A] = l match {
     case Nil => throw new Error("tail called on empty list")
     case Cons(h, t) => t
   }
-
-  // Exercise 3.3: replace the first element of a list with a new value
-  def setHead[A](l: List[A], h: A): List[A] = l match {
+  // checked (roughly same as official solution; 2 minor differences)
+  // Here's the official solution:
+  def tail[A](l: List[A]): List[A] = l match {
+    case Nil => sys.error("tail of empty list")
+    case Cons(_, t) => t
+  }
+  
+  
+  // Ex 3.3 Replace the first element of a list with a new value.
+  def setHead_first_try[A](l: List[A], h: A): List[A] = l match {
     case Nil => Cons(h, Nil)
     case Cons(oldh, t) => Cons(h, t) 
   } 
-    
-  // Exercise 3.4: Drop the first n elements of a list; return the rest.
-  def drop[A](l: List[A], n: Int): List[A] = {
-    if (n==0) l else l match {
-      case Nil => throw new Error("drop called on empty list")
-      case Cons(h, t) => drop(t, n-1)
-    }
+  // checked (a little different from official solution, given below)
+  def setHead[A](l: List[A], h: A): List[A] = l match {
+    case Nil => sys.error("setHead of empty list")
+    case Cons(_, t) => Cons(h, t)
   }
+  
+  // Exercise 3.4: Drop the first n elements of a list; return the rest.
+  def drop_first_try[A](l: List[A], n: Int): List[A] = if (n==0) l else l match {
+      case Nil => throw new Error("drop called on empty list")
+      case Cons(h, t) => drop_first_try(t, n-1)
+  }
+  // checked (a little different from official solution, given below)
+  def drop[A](l: List[A], n: Int): List[A] = if (n <=0 ) l else l match {
+      case Nil => Nil
+      case Cons(_, t) => drop(t, n-1)
+  }
+  /* Explanation: The usual default for `drop` is not to throw an exception, since 
+   * it's typically used in cases where this is not indicative of a programming error. 
+   * `drop` is often used in cases where the length of the input list is unknown, and 
+   * the number of elements to be dropped is being computed from something else. If 
+   * `drop` threw an exception, we'd have to first compute or check the length and 
+   * only drop up to that many elements. 
+   */
 
   // Exercise 3.5: dropWhile
   // Drop each leading element h that satisfies f(h).
   // As soon as an element appears that doesn't satisfy f, return the remaining list.  
   // (grouping arguments allows for better type inference)
   def dropWhile[A] (l: List[A]) (f: A => Boolean): List[A] = l match {
-    case Cons(h, t) if f(h) => dropWhile(t)(f) 
+    case Cons(h, t) if f(h) => dropWhile(t)(f)  // `if <cond>` before => is a "pattern guard" 
     case _ => l
   }
-
+  // checked (signature is a bit different from official solution, which is uncurried)
+  
   // Exercise 3.6: init
   // Take all but the last element of a list, dropping the last.
   // (non-tail-recursive version)
@@ -200,6 +220,7 @@ object List { // `List` companion object. Contains functions for creating and wo
     case (Nil, _) => Nil
     case (Cons(ah, at), Cons(bh, bt)) => Cons(f(ah,bh), zipWith_first_try(at, bt)(f))
   }
+  // checked (same as official solution)
 
   def zipWith[A,B,C](a: List[A], b: List[B])(f: (A, B) => C): List[C] = {
     def zipWith_rev(a: List[A], b: List[B], c: List[C])(f: (A, B) => C): List[C] =
