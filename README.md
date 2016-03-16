@@ -26,11 +26,10 @@ using the Eclipse IDE, I followed these steps:
 
         git clone git@github.com:fpinscala/fpinscala.git
 
-2. Create a new repository called ~my_fpinscala~ fpinscala_wjd in my 
+2. Create a new repository called fpinscala_wjd in my 
    GitHub account, set the remote url of my copy of fpinscala to point 
    to my new repo, and push the files:
 
-        ~git remote set-url origin git@github.com:williamdemeo/my_fpinscala.git~
         git remote set-url origin git@github.com:williamdemeo/fpinscala_wjd.git		
 		git push -u origin master
 		
@@ -59,7 +58,7 @@ using the Eclipse IDE, I followed these steps:
 
      (These commands must be separated by blank lines, as shown above.)
 
-   - Enter the ~my_fpinscala~ fpinscala_wjd directory and execute the following:
+   - Enter the fpinscala_wjd directory and execute the following:
 
             ~/git/PROGRAMMING/Scala/fpinscala_wjd$ sbt
             > project exercises
