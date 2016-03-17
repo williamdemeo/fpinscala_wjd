@@ -1,3 +1,9 @@
+/* Ch05_laziness.sc for scratch work and testing of methods in Stream.scala
+ * Author: williamdemeo@gmail.com
+ * Date: 14 March 2016
+ */
+
+
 package fpinscala.laziness
 import Stream._
 
