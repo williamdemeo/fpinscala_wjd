@@ -76,11 +76,11 @@ object Par {
      */
   }
       
-
   // Ex 7.2 Before continuing, try to come up with representations for Par that make it possible to implement the functions of our API.
     
   // Ex 7.3 (Hard) Fix the implementation of map2 so that it respects the contract of timeouts on Future.    
-
+  // (skipping for now)
+    
   // Ex 7.4 This API already enables a rich set of operations. Here's a simple example: using lazyUnit, write a function to 
   // convert any function A => B to one that evaluates its result asynchronously.
   def asyncF[A,B](f: A => B): A => Par[B] = a => lazyUnit(f(a))
@@ -93,22 +93,39 @@ object Par {
    *   So if we passed parList to one side of map2, we'd be able to gain access to the List inside and sort it. 
    *   And we can pass whatever we want to the other side of map2, so let's just pass a no-op: 
    */
-  def sortPar_first_try(parList: Par[List[Int]]): Par[List[Int]] = map2(parList, unit(()))((a,_) => a.sorted)
+  def sortPar_first_try(parList: Par[List[Int]]): Par[List[Int]] = 
+    map2(parList, unit(()))((a,_) => a.sorted)
 
-  // We generalize this so we can lift any function of type A => B to a function of type Par[A] => Par[B]
+  // Let's generalize this to a method that lifts a function of type A => B to a function of type Par[A] => Par[B]
   def map[A,B](pa: Par[A])(f: A => B): Par[B] = map2(pa, unit(()))((a,_) => f(a))
 
   // Now sortPar is easier and more readable.
   def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
 
-  // Ex 7.5 (Hard) Write a function called sequence. (No additional primitives are required. Do not call run.)
-  def sequence[A](ps: List[Par[A]]): Par[List[A]] = ???
-  
-  // Ex 7.5b Implement parMap in terms of existing combinators:
-  def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] = ???
+  // Ex 7.5 (Hard) Write a function called sequence with the given signature
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] = 
+    ps.foldRight[Par[List[A]]](unit(List()))((x,y) => map2(x,y)( _::_ ))
+  // (Same as sequence method in Option.scala.)
+    
+  // Ex 7.5b Implement a parMap method that maps over a list in parallel. Use existing combinators. 
+  // Unlike map2, which combines two parallel computations, parMap needs to combine N parallel computations.
+  def parMap[A,B](ps: List[A])(f: A => B): Par[List[B]] = fork{
+    // First construct a list of Par[A]'s using List[A]'s map method.
+    val fps: List[Par[B]] = ps.map(asyncF(f)) // a list of parallel computations
+    // asyncF takes A => B to A => Par[B]. Now we just collect the results of these
+    // par comps as a Par[List[B]] using sequence:
+    sequence(fps)
+    /* We wrap it all in a call to fork, so when we later call run, this will fork a single 
+     * asynchronous computation spawning N parallel computations, wait for these 
+     * computations to finish, and collect their results in a list.
+     */
+  }
   
   // Ex 7.6 Implement parFilter, which filters elements of a list in parallel.
-  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = ???
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
+    val pas: List[Par[List[A]]] = as.map(asyncF((a:A) => if(f(a)) List(a) else List()))
+    map(sequence(pas))(_.flatten)
+  } // (copied official solution)
   
   // Leibniz equality: 
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = p(e).get == p2(e).get
