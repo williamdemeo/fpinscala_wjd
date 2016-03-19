@@ -68,6 +68,21 @@ using the Eclipse IDE, I followed these steps:
      This switches to the exercises project, where your code lives, compiles the
      code, and then generates Eclipse files necessary to import the project into
      Eclipse.
+	 
+	 **update:** If you're using an encrypted filesystem, the above compile
+     command might result in the following error message:
+	 
+            [error] File name too long
+            [error] one error found
+            [error] (exercises/compile:compile) Compilation failed
+	 
+	 To fix this, add the following line to the file `~/.sbt/0.13/local.sbt`
+     (create that file if it doesn't already exist):
+	 
+            scalacOptions ++= Seq("-Xmax-classfile-name","78")
+			
+     (See [this page](http://stackoverflow.com/questions/28565837/filename-too-long-sbt)
+     for more details.)
 
 4. Finally, we can import projects into Eclipse:
 

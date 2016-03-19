@@ -126,7 +126,7 @@ object Par {
     val pas: List[Par[List[A]]] = as.map(asyncF((a:A) => if(f(a)) List(a) else List()))
     map(sequence(pas))(_.flatten)
   } // (copied official solution)
-  
+
   // Leibniz equality: 
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = p(e).get == p2(e).get
   // (two expressions are "Leibniz equal" if they evaluate to the same value no matter the context)
@@ -137,6 +137,45 @@ object Par {
     es => if (run(es)(cond).get) t(es) // Notice we are blocking on the result of `cond`.
           else f(es)
 
+  /* Let's generalize from Boolean argument (and selecting from among two possible parallel 
+   * computations, t and f) to a list of N possible computations.
+   */
+  // Ex 7.11 Implement `choiceN` and then reimplement `choice` in terms of `choiceN`.  
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] =
+    es => {
+      def choice_aux(m: Int, cs: List[Par[A]]): Par[A] = (m,cs) match {
+        case (0, h::t) => h
+        case (k, h::t) if (k>0) => choice_aux(k-1, t) 
+        case (_, Nil) => sys.error("failed to find appropriate choice")  
+    }
+    val i = run(es)(n).get
+    choice_aux(i, choices)(es)
+  }
+
+  def boolToInt(b: Boolean): Int = if(b) 1 else 0
+  
+  def choice_second_try[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = 
+    choiceN(map(cond)(boolToInt))(List(f,t)) // from type Boolean => Int to type Par[Boolean] => Par[Int]
+
+  // Let's keep going to see if we can refine choice to an even more general combinator.
+
+  /* Ex 7.12 There's still something arbitrary about choiceN. The type `List` seems overly specific. 
+   * Why does the container type matter? For instance, what if, instead of a list of computations, we have 
+   * a Map of them:
+   */
+  def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] = es => choices(run(es)(key).get)(es)
+  
+  // See if you can come up with a new and more general combinator in terms of which you can implement 
+  // choice, choiceN, and choiceMap.    
+  def mapPar[X,Y](x: Par[X])(f: X => Par[Y]): Par[Y] = es => f(run(es)(x).get)(es) 
+  
+  // Ex 7.13 Implement a new primitive chooser, and then use it to implement choice and choiceN.
+  def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = es => choices(run(es)(pa).get)(es)
+  // This is exactly what I've already done above (where I've called it mapPar.)
+
+  // Ex 7.14 Implement join. Can you see how to implement flatMap using join? Can you implement join using flatMap?
+  def join[A](a: Par[Par[A]]): Par[A] = ???
+  
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
@@ -156,4 +195,5 @@ object Examples {
       sum(l) + sum(r) // Recursively sum both halves and add the results together.
     }
 
+  
 }
