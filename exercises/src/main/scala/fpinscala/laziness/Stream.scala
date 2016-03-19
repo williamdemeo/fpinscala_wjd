@@ -1,9 +1,18 @@
-// Authors: Paul Chiusano and Runar Bjarnason
-// Url: https://github.com/fpinscala/fpinscala 
-// 
-// Exercises in this file were solved by williamdemeo@gmail.com.
-// The solutions may be imperfect. Authoritative solutions are provided by 
-// Chiusano and Bjarnason at the github repository cited above.
+/* File: Stream.scala (Ch 5)
+ * Authors: Paul Chiusano and Runar Bjarnason
+ * Url: https://github.com/fpinscala/fpinscala 
+ * 
+ * Description: This is a modified version of the file Stream.scala
+ *   that accompanies the book "Functional Programming in Scala" by
+ *   Chiusano and Bjarnason. This version of the file includes 
+ *   solutions to some of the exercises in 
+ * 
+ *     CHAPTER 5: Strictness and laziness
+ * 
+ *   The solutions herein are by William DeMeo <williamdemeo@gmail.com>.
+ *   They are at best imperfect, and possibly wrong.  Official solutions by 
+ *   Chiusano and Bjarnason are available in the github repo mentioned above.
+ */
 
 package fpinscala.laziness
 

@@ -1,3 +1,19 @@
+/* File: Par.scala (Ch 7)
+ * Authors: Paul Chiusano and Runar Bjarnason
+ * Url: https://github.com/fpinscala/fpinscala 
+ * 
+ * Description: This is a modified version of the file Par.scala
+ *   that accompanies the book "Functional Programming in Scala" by
+ *   Chiusano and Bjarnason. This version of the file includes 
+ *   solutions to some of the exercises in 
+ * 
+ *     CHAPTER 7: Purely functional parallelism 
+ * 
+ *   The solutions herein are by William DeMeo <williamdemeo@gmail.com>.
+ *   They are at best imperfect, and possibly wrong.  Official solutions by 
+ *   Chiusano and Bjarnason are available in the github repo mentioned above.
+ */
+
 package fpinscala.parallelism
 
 import java.util.concurrent._

@@ -1,15 +1,24 @@
-// Authors: Paul Chiusano and Runar Bjarnason
-// Url: https://github.com/fpinscala/fpinscala 
-// 
-// Exercises in this file were solved by williamdemeo@gmail.com.
-// The solutions are probably imperfect. Authoritative solutions by 
-// Chiusano and Bjarnason are in the github repository cited above.
+/* File: State.scala (Ch 6)
+ * Authors: Paul Chiusano and Runar Bjarnason
+ * Url: https://github.com/fpinscala/fpinscala 
+ * 
+ * Description: This is a modified version of the file State.scala
+ *   that accompanies the book "Functional Programming in Scala" by
+ *   Chiusano and Bjarnason. This version of the file includes 
+ *   solutions to some of the exercises in 
+ * 
+ *     CHAPTER 6: Purely functional state
+ * 
+ *   The solutions herein are by William DeMeo <williamdemeo@gmail.com>.
+ *   They are at best imperfect, and possibly wrong.  Official solutions by 
+ *   Chiusano and Bjarnason are available in the github repo mentioned above.
+ */
 
 package fpinscala.state
 
 
 trait RNG {
-  def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
+  def nextInt: (Int, RNG) // Should generate a random `Int`. 
 }
 
 object RNG {
@@ -154,14 +163,11 @@ object RNG {
 		flatMap(ra)(a => map(rb)(b => f(a,b)))
 		// checked (same as official solutions)
 	 
-		 
 	/* Ex 6.10 Generalize the functions unit, map, map2, flatMap, and sequence. 
 	 * Add them as methods on the State case class where possible. Otherwise you 
 	 * should put them in a State companion object.
 	 */
-
-
-
+  // Skipping Ex 6.10 for now.  Maybe come back to it later.
 }
 
 case class State[S,+A](run: S => (A, S)) {
