@@ -45,7 +45,21 @@ object Prop {
 object Gen {
   def unit[A](a: => A): Gen[A] = ???
   def listOf[A](a: Gen[A]): Gen[List[A]] = ???
-  def choose(start: Int, stopExclusive: Int): Gen[Int] = ???
+  
+  /* We determined earlier that a Gen[A] was something that knows how to generate values of type A . 
+   * What are some ways it could do that? Well, it could randomly generate these values. 
+   * Look back at the example from chapter 6--there, we gave an interface for a purely functional 
+   * random number generator RNG and showed how to make it convenient to combine computations that 
+   * made use of it. We could just make Gen a type that wraps a State transition over a random number 
+   * generator: 
+   * 
+   *   case class Gen[A](sample: State[RNG,A]) 
+   * 
+   * Recall, the definition: case class State[S,A](run: S => (A,S)) 
+   */
+  // Ex 8.4 Implement Gen.choose using this representation of Gen . 
+  // It should generate integers in the range start to stopExclusive.
+  def choose(start: Int, stopExclusive: Int): Gen[Int] = 
 }
 
 // Gen[A] is something that knows how to generate inhabitants of A.
