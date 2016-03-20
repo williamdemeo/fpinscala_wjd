@@ -59,7 +59,7 @@ object Gen {
    */
   // Ex 8.4 Implement Gen.choose using this representation of Gen . 
   // It should generate integers in the range start to stopExclusive.
-  def choose(start: Int, stopExclusive: Int): Gen[Int] = 
+  def choose(start: Int, stopExclusive: Int): Gen[Int] = ???
 }
 
 // Gen[A] is something that knows how to generate inhabitants of A.
