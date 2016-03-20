@@ -231,23 +231,43 @@ object RNG {
  * should put them in a State companion object.
  */
 
-import State._  // so we can use, e.g., State.unit (from the State companion object below)
+// Import the State companion object defined below so we can use, e.g., State.unit.
+import State._  
 
+/* We should now come up with a more general type than Rand, for handling any type of state.
+ * We could use a simple type alias, like
+ * 
+ *    trait State[S,+A] = S => (A,S)
+ * 
+ * Here State is short for computation that carries some state along, or state action, state transition,
+ * or even statement. Alternatively, we could make a new class that wraps the underlying function:
+ */
 case class State[S,+A](run: S => (A, S)) {
-
   def flatMap[B](f: A => State[S, B]): State[S, B] = State(s => {
-      val (a, s2) = run(s)
+      val (a, s2) = this.run(s)
       f(a).run(s2)
     })
-
   def map_first_try[B](f: A => B): State[S, B] = State(s => {
-      val(a, s2) = run(s)
+      val(a, s2) = this.run(s)
       (f(a), s2 )
     })
-
   def map[B](f: A => B): State[S, B] = flatMap(a => unit(f(a))) 
-    
   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => sb.map(b => f(a, b)))
+
+}
+/* The representation (type alias or class) doesn't matter too much. What's important is that we have 
+ * a single, general-purpose type, and using this type we can write general-purpose functions for capturing 
+ * common patterns of stateful programs. And we can now just make Rand a type alias for State: 
+ *     type Rand[A] = State[RNG, A]
+ * (We do this inside the State companion object below.)
+ */
+
+object State {
+  type Rand[A] = State[RNG, A]
+  def unit[S,A](a: A): State[S,A] = State(s => (a, s))
+  // sequence--converts a list of stateful things to a stateful list of things.
+  def sequence[S,A](sas: List[State[S,A]]): State[S,List[A]] =
+  	sas.foldRight(unit[S,List[A]](List()))((s, acc) => s.map2(acc)(_ :: _))
   
 }
 
@@ -257,8 +277,6 @@ case object Turn extends Input
 
 case class Machine(locked: Boolean, candies: Int, coins: Int)
 
-object State {
-  type Rand[A] = State[RNG, A]
-  def unit[S,A](a: A): State[S,A] = State(s => (a, s))
-  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
+object Candy {
+    def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
 }
