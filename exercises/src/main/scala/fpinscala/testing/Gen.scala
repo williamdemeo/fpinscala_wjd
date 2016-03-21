@@ -28,12 +28,13 @@ The library developed in this chapter goes through several iterations. This file
 shell, which you can fill in and modify while working through the chapter.
 */
 
+
 trait Prop {
 	// In case property test fails, `check` returns a Left((st,n)), where
-	//     st is a string that represents the value that caused the failure, and 
-	//     n  is the number of successful cases checked before failure occurred.
+	// st is a string that represents the value that caused the failure, and 
+	// n  is the number of successful cases checked before failure occurred.
 	def check: Either[(FailedCase, SuccessCount), SuccessCount]
-	def &&(that: Prop): Prop = this && that
+	//def &&(that: Prop): Prop = new Prop { def check = Prop.this.check && that.check}
 }
 
 object Prop {
@@ -42,30 +43,60 @@ object Prop {
   def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
 }
 
-object Gen {
-  def unit[A](a: => A): Gen[A] = ???
-  def listOf[A](a: Gen[A]): Gen[List[A]] = ???
   
-  /* We determined earlier that a Gen[A] was something that knows how to generate values of type A . 
-   * What are some ways it could do that? Well, it could randomly generate these values. 
-   * Look back at the example from chapter 6--there, we gave an interface for a purely functional 
-   * random number generator RNG and showed how to make it convenient to combine computations that 
-   * made use of it. We could just make Gen a type that wraps a State transition over a random number 
-   * generator: 
-   * 
-   *   case class Gen[A](sample: State[RNG,A]) 
-   * 
-   * Recall, the definition: case class State[S,A](run: S => (A,S)) 
-   */
-  // Ex 8.4 Implement Gen.choose using this representation of Gen . 
-  // It should generate integers in the range start to stopExclusive.
-  def choose(start: Int, stopExclusive: Int): Gen[Int] = ???
+case class Gen[A](sample: State[RNG, A]){
+/* Gen[A] is something that knows how to generate values of type A. It could randomly generate these values. 
+ * We already developed an interface for a purely functional random number generator RNG (Ch. 6), and we 
+ * showed how to make it convenient to combine computations that made use of it. 
+ * 
+ * We let `Gen` be a type that wraps a state transition over a random number generator: 
+ * 
+ *   case class Gen[A](sample: State[RNG,A]) 
+ * 
+ * Recall `case class State[S,A](run: S => (A,S))` so the `sample` function wrapped inside a Gen should be
+ * a function that gets us from state s1:RNG to a pair (a, s2):(A, RNG).
+ */
+  
+  def map[A,B](f: A => B): Gen[B] = ???
+
+  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
+
 }
 
-// Gen[A] is something that knows how to generate inhabitants of A.
-trait Gen[A] {
-  def map[A,B](f: A => B): Gen[B] = ???
-  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
+object Gen {
+  def unit[A](a: => A): Gen[A] = Gen(State.unit[RNG,A](a)) // (Scala will infer the type of State.unit here.)
+  
+  // Gen.listOf could be a function with the signature Gen[Int] => Gen[List[Int]]. But since it doesn't seem 
+  // like Gen.listOf should care about the type of the Gen it receives as input let's make it polymorphic: 
+  def listOf[A](a: Gen[A]): Gen[List[A]] = ???
+
+  /* Notice what we're not specifying--the size of the list to generate. For this to be implementable, our 
+   * generator must therefore either assume or be told the size. Assuming a size seems a bit inflexible--any 
+   * assumption is unlikely to be appropriate in all contexts. So it seems that generators must be told the 
+   * size of test cases to generate. We can imagine an API where this is made explicit:
+   */
+  def listOfN[A](n: Int, a: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(a.sample))) 
+  // Here, List.fill(n)(a.sample) results in a List[Gen[A]].
+
+  /* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
+   * as well. It means that whatever function runs the tests has the freedom to choose test case sizes, 
+   * which opens up the possibility of doing the test case minimization we mentioned earlier. If the sizes 
+   * are always fixed and specified by the programmer, the test runner won't have this flexibility.
+   */
+
+  // Ex 8.4 Implement Gen.choose using this representation of Gen . 
+  // It should generate integers in the range start to stopExclusive.
+  def choose(start: Int, stopExclusive: Int): Gen[Int] = 
+    Gen ( State(RNG.nonNegativeInt).map { n => start + n % (stopExclusive -start) } )
+    // Recall, RNG.nonNegativeInt : RNG => (Int, RNG)
+
+  /* It's hard not to get the impression that all these type aliases are obfuscating matters. 
+   * Wouldn't it be easier if we simply let Gen wrap a function of type RNG => (A, RNG), 
+   * rather than have it wrap a State that wraps a function of type RNG => (A, RNG)?  
+   * The problem with this seemingly simpler solution is that it doesn't allow us to use the 
+   * State class methods (like the map method we used above).
+   */
+    
 }
 
 trait SGen[+A] {
@@ -108,10 +139,10 @@ trait SGen[+A] {
  * 
  * 		trait Prop { 
  * 			def check: Boolean
- * 			def &&(that: Prop): Boolean = this && that
- * 		}
+ * 			def &&(that: Prop): Prop = new Prop { 
+ * 				def check = Prop.this.check && that.check
+ * 			}
  */
-
 
 
 
