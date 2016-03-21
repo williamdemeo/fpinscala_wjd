@@ -225,10 +225,6 @@ object RNG {
  *     def map[S,A,B](a: S => (A,S))(f: A => B): S => (B,S)
  * Changing this signature doesn't require modifying the implementation of map!
  * We should come up with a more general type than Rand for handling any type of state:  
- *
- * Ex 6.10 Generalize the functions unit, map, map2, flatMap, and sequence. 
- * Add them as methods on the State case class where possible. Otherwise you 
- * should put them in a State companion object.
  */
 
 // Import the State companion object defined below so we can use, e.g., State.unit.
@@ -243,17 +239,42 @@ import State._
  * or even statement. Alternatively, we could make a new class that wraps the underlying function:
  */
 case class State[S,+A](run: S => (A, S)) {
-  def flatMap[B](f: A => State[S, B]): State[S, B] = State(s => {
-      val (a, s2) = this.run(s)
-      f(a).run(s2)
+  
+/* Ex 6.10 Above we defined the following functions for the class RNG:
+ *
+ *     def unit[A](a: A): Rand[A]  
+ *     def map[A,B](s: Rand[A])(f: A => B): Rand[B]
+ *     def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C]
+ *     def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B]
+ *     def sequence[A](fs: List[Rand[A]]): Rand[List[A]]
+ * 
+ * From the names and type signatures, we can tell what these functions are meant to do, and   
+ * they all produce a Rand[X] for the given type X. Recall that Rand[X] is simply a type alias:
+ *  
+ *     type Rand[A] = RNG => (A, RNG).
+ *  
+ * So all of the above methods return a function from RNG to (A, RNG); i.e., a function that takes
+ * a "state" s1 and returns a value along with a new state (a, s2).  
+ * 
+ * Generalize the above list of functions making them methods of the State case class where 
+ * possible. Otherwise, put them in a State companion object.
+ */
+  
+  def flatMap[B](f: A => State[S, B]): State[S, B] = State(s1 => {
+    val (a, s2) = this.run(s1)
+    f(a).run(s2)
     })
-  def map_first_try[B](f: A => B): State[S, B] = State(s => {
-      val(a, s2) = this.run(s)
-      (f(a), s2 )
+  def map_first_try[B](f: A => B): State[S, B] = State(s1 => { 
+    val (a, s2) = this.run(s1)
+    (f(a),s2)
     })
+  def map_second_try[B](f: A => B): State[S, B] = flatMap(a => (State(s => (f(a), s))))
   def map[B](f: A => B): State[S, B] = flatMap(a => unit(f(a))) 
   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => sb.map(b => f(a, b)))
-
+  
+  // I'm not sure why unit must go in State companion object and not right here.
+  //     def unit[S,A](a: A): State[S, A] = State(s => (a,s))
+  // But if we put it here, it seems we can't use it in the companion object...?
 }
 /* The representation (type alias or class) doesn't matter too much. What's important is that we have 
  * a single, general-purpose type, and using this type we can write general-purpose functions for capturing 
@@ -264,10 +285,12 @@ case class State[S,+A](run: S => (A, S)) {
 
 object State {
   type Rand[A] = State[RNG, A]
+
   def unit[S,A](a: A): State[S,A] = State(s => (a, s))
+
   // sequence--converts a list of stateful things to a stateful list of things.
   def sequence[S,A](sas: List[State[S,A]]): State[S,List[A]] =
-  	sas.foldRight(unit[S,List[A]](List()))((s, acc) => s.map2(acc)(_ :: _))
+  	sas.foldRight(unit[S, List[A]](List()))((s, acc) => s.map2(acc)(_ :: _))
   
 }
 
