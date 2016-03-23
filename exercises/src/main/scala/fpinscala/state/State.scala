@@ -98,7 +98,7 @@ object RNG {
   } // checked (same as official solution)
 
 	// Ex 6.4 Write a function to generate a list of random integers.
-  def ints(count: Int)(rng: RNG): (List[Int], RNG) = {
+  def ints_first_try(count: Int)(rng: RNG): (List[Int], RNG) = {
   	@annotation.tailrec
   	def ints_aux(my_count: Int, my_rng: RNG, acc: List[Int]): (List[Int], RNG) = 
   		my_count match {
@@ -110,7 +110,21 @@ object RNG {
   	}
   	ints_aux(count, rng, Nil)
   }  // checked (similar to official solution)
+  
+  def ints_second_try(count: Int)(rng: RNG): (List[Int], RNG) = {
+  	@annotation.tailrec
+  	def ints_aux(n: Int, r_in: RNG, acc: List[Int]): (List[Int], RNG) = 
+  		if (n==0) (acc.reverse, r_in) // maybe don't really need _.reverse here.
+  		else { 
+  	    val (h,r_out) = r_in.nextInt
+  				ints_aux(n-1, r_out, h::acc)
+  		}
+  	ints_aux(count, rng, List())
+  }  // checked (similar to official solution)
 
+  def ints(count: Int)(rng:RNG): Rand[List[Int]] = 
+    sequence[Int](List.fill(count)(_.nextInt))
+  
   // Ex 6.5 Use map to reimplement double in a more elegant way. See exercise 6.2.
   def double_with_map(rng: RNG): (Double, RNG) = 
   	map(nonNegativeInt)(_/(Int.MaxValue.toDouble+1))(rng)
@@ -134,19 +148,17 @@ object RNG {
    * List.fill(n)(x) to make a list with x repeated n times. 
    */
  	// pm version 
-  def sequence_first_try[A](fs: List[Rand[A]]): Rand[List[A]] = 
-  	rng => {
-	  	def sequence_aux(my_fs: List[Rand[A]], acc: List[A])(r: RNG): (List[A],RNG) =
-	  		my_fs match {
-	  		case fh::ft => {
-	  			val (a, r1) = fh(r)
-	  			sequence_aux(ft, a::acc)(r1)
-	  			}
-	  		case List() => (acc, r)
-	  	}
-	  	sequence_aux(fs,List())(rng)
-  } // It's not pretty, but I think it works.
-  // official solution:  	
+  def sequence_first_try[A](fs: List[Rand[A]]): Rand[List[A]] = { 
+    def seq_aux(fs: List[Rand[A]], acc: List[A])(r: RNG): (List[A],RNG) = fs match {
+      case Nil => (acc.reverse, r) // (probably don't need reverse, since these are random!)      
+	    case h::t => {
+	      val (a, r1) = h(r)
+	  		seq_aux(t, a::acc)(r1)
+	    }
+	  }
+	  rng => seq_aux(fs,List())(rng)
+  } // It's not as clean as the official solution, but it seems a bit clearer to me.
+  // official solution:
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] =
   	fs.foldRight(unit(List[A]()))((f, acc) => map2(f, acc)(_ :: _))
 
