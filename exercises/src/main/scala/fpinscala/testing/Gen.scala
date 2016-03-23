@@ -59,8 +59,11 @@ case class Gen[A](sample: State[RNG, A]){
   
   def map[A,B](f: A => B): Gen[B] = ???
 
-  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
+  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(this.sample.flatMap[B](a => f(a).sample)) 
 
+  def listOfSize(size: Int): Gen[List[A]] = Gen.listOfSizeN(size, this)
+
+  def listOfN(gsize: Gen[Int]): Gen[List[A]] = gsize flatMap(n => this.listOfSize(n))
 }
 
 object Gen {
@@ -75,10 +78,9 @@ object Gen {
    * assumption is unlikely to be appropriate in all contexts. So it seems that generators must be told the 
    * size of test cases to generate. We can imagine an API where this is made explicit:
    */
-  def listOfN[A](n: Int, a: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(a.sample))) 
-  // Here, List.fill(n)(a.sample) results in a List[Gen[A]].
-
-  /* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
+  def listOfSizeN[A](n: Int, g: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(g.sample))) 
+  // Here, List.fill(n)(g.sample) results in (g.sample, g.sample, ..., g.sample): List[State[S,A]].
+	/* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
    * as well. It means that whatever function runs the tests has the freedom to choose test case sizes, 
    * which opens up the possibility of doing the test case minimization we mentioned earlier. If the sizes 
    * are always fixed and specified by the programmer, the test runner won't have this flexibility.
@@ -99,6 +101,24 @@ object Gen {
    * The problem with this seemingly simpler solution is that it doesn't allow us to use the 
    * State class methods (like the map method we used above).
    */
+    
+  // p.131: If we can generate a single Int in some range, do we need a new primitive to 
+  // generate an (Int,Int) pair in some range? Answer: No, we don't need new primitives.
+  // It's very easy to get a list of two random integers in the interval [a,b):
+  def intListOfTwoInts(a: Int, b: Int): Gen[List[Int]] = listOfSizeN[Int](2, choose(a,b))  
+  // It's only slightly harder to get a pair of two random integers in the interval [a,b):
+  def intPair(a: Int, b: Int): Gen[(Int,Int)] = 
+    Gen(listOfSizeN[Int](2, choose(a,b)).sample.map{ case List(x,y) => (x,y) })  
+
+  // p.131: Can we produce a Gen[Option[A]] from a Gen[A]? Answer: yes.
+  def genToOpt[A](g: Gen[A]): Gen[Option[A]] = Gen(g.sample.map[Option[A]](a => Some(a)))
+  // p.131: What about a Gen[A] from a Gen[Option[A]]?  
+  // Answer: Yes, if we know what to do with None cases.  Here's one possibility:
+  def genFromOpt[A](g: Gen[Option[A]]): Gen[A] = 
+    Gen(g.sample.map[A]{
+      case None => sys.error("None")
+      case Some(a) => a
+      })
     
 }
 
