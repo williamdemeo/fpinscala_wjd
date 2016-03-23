@@ -66,8 +66,8 @@ case class Gen[A](sample: State[RNG, A]){
 object Gen {
   def unit[A](a: => A): Gen[A] = Gen(State.unit[RNG,A](a)) // (Scala will infer the type of State.unit here.)
   
-  // Gen.listOf could be a function with the signature Gen[Int] => Gen[List[Int]]. But since it doesn't seem 
-  // like Gen.listOf should care about the type of the Gen it receives as input let's make it polymorphic: 
+  // Gen.listOf might start life with the signature Gen[Int] => Gen[List[Int]]. 
+  // But Gen.listOf shouldn't care about the type of Gen it receives as input, so we make it polymorphic: 
   def listOf[A](a: Gen[A]): Gen[List[A]] = ???
 
   /* Notice what we're not specifying--the size of the list to generate. For this to be implementable, our 
@@ -87,8 +87,11 @@ object Gen {
   // Ex 8.4 Implement Gen.choose using this representation of Gen . 
   // It should generate integers in the range start to stopExclusive.
   def choose(start: Int, stopExclusive: Int): Gen[Int] = 
-    Gen ( State(RNG.nonNegativeInt).map { n => start + n % (stopExclusive -start) } )
-    // Recall, RNG.nonNegativeInt : RNG => (Int, RNG)
+    Gen ( State(RNG.nonNegativeLessThan(stopExclusive -start)).map(_ + start))
+    // RNG.nonNegativeLessThan returns a Rand[Int], which is an alias for RNG => (Int, RNG).
+    // nonNegativeLessThan(b-a) gives a random int in [0, b-a).
+    // map(_+a) take that int to the interval [a, b), as desired.
+    // This is simpler than the official solution.
 
   /* It's hard not to get the impression that all these type aliases are obfuscating matters. 
    * Wouldn't it be easier if we simply let Gen wrap a function of type RNG => (A, RNG), 
