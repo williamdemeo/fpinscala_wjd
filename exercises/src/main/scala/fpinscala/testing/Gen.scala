@@ -23,28 +23,81 @@ import Gen._
 import Prop._
 import java.util.concurrent.{Executors,ExecutorService}
 
-/*
-The library developed in this chapter goes through several iterations. This file is just the
-shell, which you can fill in and modify while working through the chapter.
-*/
+/* _Justification for the new type called `Return`_ (cf. p.133 of fpinscala)
+ * Initially, the return type of a Prop was Option, with None returned in case of failure.
+ * This seemed reasonable, but it was refined so we could get a message indicating reason for 
+ * failure and an int showing how many tests passed before the failure.  The Either type seem
+ * appropriate for this purpose.  Refining further, we decided that the number of tests to run should
+ * be passed in to the Prop type itself.  Therefore, if all tests pass, there's no reason to report
+ * the number of successes, since it will equal the input parameter in all such cases.  So, we are
+ * back to the Option type.  But it's strange to use the Option type when we want None to denote 
+ * success and Some((message, n)) to denote failure.  We want the return type of Prop to clearly 
+ * represent our intention and the Option type seems to be the opposite of our intention.  So we give 
+ * up on the built-in types and create our own that is the most appropriate return type for Prop. 
+ * We name this type `Result.`
+ */
+// Result type is the return type of a Prop's run method.
+sealed trait Result { def isFalsified: Boolean }
+
+// A Prop's run method returns Proved if there is only one thing to test and it passed.
+case object Proved extends Result { def isFalsified = false }
+
+// A Prop's run method will return the Passed object if the test passes.
+case object Passed extends Result { def isFalsified = false }
+
+// A Prop's run method will return a Falsified object in case of failure.
+case class Falsified (failure_string: FailedCase, 
+                      num_successful: SuccessCount) 
+                      extends Result { def isFalsified = true }
 
 
-trait Prop {
-	// In case property test fails, `check` returns a Left((st,n)), where
-	// st is a string that represents the value that caused the failure, and 
-	// n  is the number of successful cases checked before failure occurred.
-	def check: Either[(FailedCase, SuccessCount), SuccessCount]
-	//def &&(that: Prop): Prop = new Prop { def check = Prop.this.check && that.check}
+case class Prop( run: (Int, RNG) => Result ) {
+  // Ex 8.9a Implement && for composing Prop values.
+  def &&(that: Prop): Prop = Prop ( (n, rng) => { 
+    val res1 = this.run(n,rng)
+    res1 match {
+        case Passed => that.run(n,rng)
+        case _ => res1
+      } }
+  )
+  // Ex 8.9b Implement || for composing Prop values.
+  def ||(that: Prop): Prop = Prop ( (n, rng) => {
+    val res1 = this.run(n,rng)
+    res1 match {
+        case Passed => res1
+        case _ => that.run(n,rng)
+      }   }
+  )
+  // Notice that in the case of failure we don't know which property was responsible, the left or 
+  // the right. Can you devise a way of handling this? perhaps by allowing Prop values to be 
+  // assigned a tag or label which gets displayed in the event of a failure?
 }
 
 object Prop {
-	type FailedCase = String // a message (possibly) indicating why a test failed
-	type SuccessCount = Int  // number of successful tests run
-  def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
+	type FailedCase = String // (type alias) this is the type of strings that describe a test failure
+	// This could be a message (possibly) indicating why a test failed.
+	type SuccessCount = Int  // (type alias) for int values indicating how many tests have passed
+
+	def forAll[A](as: Gen[A])(predicate: A => Boolean): Prop = Prop {
+	  // Use randomStream to get random stream of A's, then zip that with a stream of ints to get a stream of 
+	  // pairs of type (A, Int). Then, take(n) from the stream of pairs apply the map which tests the predicate.
+	  (n, rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+	    case (a, i) => try {
+	      if (predicate(a)) Passed else Falsified(a.toString, i)
+	    } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+	  }.find(_.isFalsified).getOrElse(Passed)
+	}
+
+	def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+	
+	def buildMsg[A](s: A, e: Exception): String =
+	  s"test case: $s\n" +
+	  s"generated an exception: ${e.getMessage}\n" +
+	  s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
 }
 
   
-case class Gen[A](sample: State[RNG, A]){
+case class Gen[+A](sample: State[RNG, A]){
 /* Gen[A] is something that knows how to generate values of type A. It could randomly generate these values. 
  * We already developed an interface for a purely functional random number generator RNG (Ch. 6), and we 
  * showed how to make it convenient to combine computations that made use of it. 
@@ -64,30 +117,13 @@ case class Gen[A](sample: State[RNG, A]){
   def listOfSize(size: Int): Gen[List[A]] = Gen.listOfSizeN(size, this)
 
   def listOfN(gsize: Gen[Int]): Gen[List[A]] = gsize flatMap(n => this.listOfSize(n))
+  
+  // Ex 8.10 Implement helper functions for converting Gen to SGen.
+  def unsized: SGen[A] = SGen(_ => this)    
 }
 
 object Gen {
-  def unit[A](a: => A): Gen[A] = Gen(State.unit[RNG,A](a)) // (Scala will infer the type of State.unit here.)
-  
-  // Gen.listOf might start life with the signature Gen[Int] => Gen[List[Int]]. 
-  // But Gen.listOf shouldn't care about the type of Gen it receives as input, so we make it polymorphic: 
-  def listOf[A](a: Gen[A]): Gen[List[A]] = ???
-
-  /* Notice what we're not specifying--the size of the list to generate. For this to be implementable, our 
-   * generator must therefore either assume or be told the size. Assuming a size seems a bit inflexible--any 
-   * assumption is unlikely to be appropriate in all contexts. So it seems that generators must be told the 
-   * size of test cases to generate. We can imagine an API where this is made explicit:
-   */
-  def listOfSizeN[A](n: Int, g: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(g.sample))) 
-  // Here, List.fill(n)(g.sample) results in (g.sample, g.sample, ..., g.sample): List[State[S,A]].
-	/* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
-   * as well. It means that whatever function runs the tests has the freedom to choose test case sizes, 
-   * which opens up the possibility of doing the test case minimization we mentioned earlier. If the sizes 
-   * are always fixed and specified by the programmer, the test runner won't have this flexibility.
-   */
-
-  // Ex 8.4 Implement Gen.choose using this representation of Gen . 
-  // It should generate integers in the range start to stopExclusive.
+  // Ex 8.4 Implement Gen.choose which generates ints in the range [start, stopExclusive).
   def choose(start: Int, stopExclusive: Int): Gen[Int] = 
     Gen ( State(RNG.nonNegativeLessThan(stopExclusive -start)).map(_ + start))
     // RNG.nonNegativeLessThan returns a Rand[Int], which is an alias for RNG => (Int, RNG).
@@ -101,6 +137,22 @@ object Gen {
    * The problem with this seemingly simpler solution is that it doesn't allow us to use the 
    * State class methods (like the map method we used above).
    */
+  // Ex 8.5 Let's see what else we can implement using this representation of Gen . 
+  // Try implementing unit, boolean, and listOfN.
+  def unit[A](a: => A): Gen[A] = Gen(State.unit[RNG,A](a)) // (Scala will infer the type of State.unit here.)
+
+  def boolean: Gen[Boolean] = Gen(State(RNG.boolean))
+
+  def double: Gen[Double] = Gen(State(RNG.double))
+  
+  def listOfSizeN[A](n: Int, g: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(g.sample))) 
+  // Here, List.fill(n)(g.sample) results in (g.sample, g.sample, ..., g.sample): List[State[S,A]].
+	/* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
+   * as well. It means that whatever function runs the tests has the freedom to choose test case sizes, 
+   * which opens up the possibility of doing the test case minimization we mentioned earlier. If the sizes 
+   * are always fixed and specified by the programmer, the test runner won't have this flexibility.
+   */
+
     
   // p.131: If we can generate a single Int in some range, do we need a new primitive to 
   // generate an (Int,Int) pair in some range? Answer: No, we don't need new primitives.
@@ -116,15 +168,44 @@ object Gen {
   // Answer: Yes, if we know what to do with None cases.  Here's one possibility:
   def genFromOpt[A](g: Gen[Option[A]]): Gen[A] = 
     Gen(g.sample.map[A]{
-      case None => sys.error("None")
-      case Some(a) => a
-      })
+        case None => sys.error("None")
+        case Some(a) => a
+        }
+    ) 
+
+  // Ex 8.7 Implement union, for combining two generators of the same type into one, by pulling
+  // values from each generator with equal likelihood.
+  def union_first_try[A](g1: Gen[A], g2: Gen[A]): Gen[A] = 
+    Gen ( State ( rng => RNG.boolean(rng) match {
+      case (true,  _) => g1.sample.run(rng)
+      case (false, _) => g2.sample.run(rng)
+    } ) )
+  // Actually, it's much easier than this.  We simply want to return g1 (or g2) itself, depending 
+  // on the value of a randomly generated boolean, so...
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = boolean.flatMap[A](x => if(x) g1 else g2)
+      
+  // Ex 8.8 Implement weighted, a version of union that accepts a weight for each Gen and 
+  // generates values from each Gen with probability proportional to its weight.
+  def weighted[A](t1: (Gen[A],Double), t2: (Gen[A],Double)): Gen[A] = 
+    double.flatMap[A]( x => if( x < t1._2 ) t1._1 else t2._1 )   
     
 }
 
-trait SGen[+A] {
+case class SGen[+A](forSize: Int => Gen[A]){
 
+  // Ex 8.11 SGen supports many of the same ops as Gen. Define some convenience functions on SGen that 
+  // simply delegate to the corresponding functions on Gen.
+  def flatMap[B](f: A => SGen[B]): SGen[B] = SGen(n => this.forSize(n).flatMap { x => f(x).forSize(n) })
+  // Not sure if flatMap is correct.  Better check it.
+
+  // Ex.12 Implement a listOf combinator that doesn't accept an explicit size. It should return an
+  // SGen instead of a Gen. The implementation should generate lists of the requested size.
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfSize(n))
+
+  
 }
+
+
 
 /* Ex 8.1 To get used to thinking about testing in this way, come up with properties that
  * specify the implementation of a sum: List[Int] => Int function. You don't have to write 

@@ -236,6 +236,9 @@ trait Stream[+A] {
   }
   // checked (same as official solution)
   
+  //---- zip --- (a special case of zipWith) ---------------------------------
+  def zip[B](b: Stream[B]): Stream[(A,B)] = zipWith(b)((_,_))
+  
   //---- zipAll (with unfold) ---------------------------------------------- 
   // The zipAll function should continue the traversal as long as either stream has more 
   // elements--it uses Option to indicate whether each stream has been exhausted.

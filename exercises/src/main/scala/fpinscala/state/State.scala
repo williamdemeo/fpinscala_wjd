@@ -66,6 +66,16 @@ object RNG {
   	if (i<0) (-(i+1), r ) else (i, r)
   }
 
+  // The book doesn't ask us to define a boolean generator, but we need it later in Gen.scala. 
+  def boolean_first_try(rng: RNG): (Boolean, RNG) = {
+    val (i,r) = rng.nextInt
+    ( i > 0 ,r)
+    // alternatively: (i%2==0, r)
+  } // This is fine, but here's the "official" solution:
+  def boolean(rng: RNG): (Boolean, RNG) = 
+    rng.nextInt match { case (a,r) => (a%2==0, r) }
+  
+  
   /* Ex 6.2 Write a function to generate a Double between 0 and 1, not including 1. 
    * Note: You can use Int.MaxValue to obtain the maximum positive integer value, 
    * and you can use x.toDouble to convert an x: Int to a Double.
