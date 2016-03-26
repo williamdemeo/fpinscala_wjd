@@ -24,7 +24,7 @@ import Prop._
 import java.util.concurrent.{Executors,ExecutorService}
 
 
-// ---- begin: Prop class ------------------------------------------------------------------
+//==== begin: Prop class ============================================================================
 case class Prop( run: (MaxTestSize, NumberOfTests, RNG) => Result ) {
 
 	// Ex 8.9a Implement && for composing Prop values.
@@ -32,6 +32,7 @@ case class Prop( run: (MaxTestSize, NumberOfTests, RNG) => Result ) {
     val res1 = this.run(maxsize, numtests, rng)
     res1 match {
         case Passed => that.run(maxsize, numtests, rng)
+        case Proved => that.run(maxsize, numtests, rng)
         case _ => res1
       } }
   )
@@ -40,6 +41,7 @@ case class Prop( run: (MaxTestSize, NumberOfTests, RNG) => Result ) {
     val res1 = this.run(maxsize, numtests, rng)
     res1 match {
         case Passed => res1
+        case Proved => res1
         case _ => that.run(maxsize, numtests, rng)
       }   }
   )
@@ -47,25 +49,25 @@ case class Prop( run: (MaxTestSize, NumberOfTests, RNG) => Result ) {
   // the right. Can you devise a way of handling this? perhaps by allowing Prop values to be 
   // assigned a tag or label which gets displayed in the event of a failure?
 }
-// ---- end: Prop class ------------------------------------------------------------------
+//===== end: Prop class =======================================================================
 
-//---- begin: Prop companion object ------------------------------------------------------
+
+//===== BEGIN: Prop companion object ===========================================================
 object Prop {
 	type FailedCase = String // (type alias) strings that describe a test failure (indicate why a test failed)
 	type SuccessCount = Int  // (type alias) how many tests have passed
 	type NumberOfTests = Int
 	type MaxTestSize = Int
 
-	// _Justification for the new type called `Return`_ (cf. p.133 of fpinscala)
-	// (notes about this moved to bottom of this file)
+	// _Justification for the new type called `Return`_ (cf. p.133 of fpinscala) (notes about this moved to bottom of this file)
 
 	// Result type is the return type of a Prop's run method.
 	sealed trait Result { def isFalsified: Boolean }
 
-	// A Prop's run method returns Proved if there is only one thing to test and it passed.
+	// A Prop's run method returns Proved if there is only one thing to test and it passes.
 	case object Proved extends Result { def isFalsified = false }
 
-	// A Prop's run method will return the Passed object if the test passes.
+	// A Prop's run method will return the Passed object if all tests succeed.
 	case object Passed extends Result { def isFalsified = false }
 
 	// A Prop's run method will return a Falsified object in case of failure.
@@ -76,7 +78,7 @@ object Prop {
 	
 	def apply(f: (NumberOfTests,RNG) => Result): Prop = Prop { (_,n,rng) => f(n,rng) }
 	
-	// helper method
+	// run helper method
   def run(p: Prop,
   	      maxSize: Int = 100,
           testCases: Int = 100,
@@ -90,6 +92,7 @@ object Prop {
         println(s"+ OK, proved property.")
     }
 
+  
   //--- First implementation of forAll, for "static" test sizes ---
 	/* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
@@ -121,7 +124,31 @@ object Prop {
   			Prop { (mx, _, rng) => p.run(mx, casesPerSize, rng) } ).toList.reduce(_ && _)
 	  	prop.run(maxSize, numTests, rng)
 	}
-//---- end: Prop companion object -------------------------------------------------
+  
+  
+  //--- BEGIN: Helper methods for streamlining Par tests -------------------------------
+  val ES: ExecutorService = Executors.newCachedThreadPool
+
+  // check is for proving properties or laws.
+  def check(p: => Boolean): Prop = Prop { (_, _, _) =>	if (p) Proved else Falsified("()", 0)  }
+
+
+  // Lift equality relation into Par using map2.
+  def equal[A](p1: Par[A], p2: Par[A]): Par[Boolean] = Par.map2(p1,p2)(_ == _)
+  
+  val S = weighted(
+  		(choose(1,4).map(Executors.newFixedThreadPool), .75),  // create fixed thread pool (TP) 75% of the time
+  		(unit(Executors.newCachedThreadPool), .25)  // create unbounded TP 25% of the time.
+  	)
+  	
+ 	def forAllPar[A](g: Gen[A]) (f: A => Par[Boolean]): Prop = 
+ 		forAll(S ** g) { case (s,a) => f(a)(s).get }
+
+  def checkPar(p: Par[Boolean]): Prop = forAllPar(Gen.unit(()))(_ => p)
+  def provePar(p: Par[Boolean]): Prop = Prop { (_,_,_) =>	if (p(ES).get) Proved else Falsified("()", 0)  }
+  //---- END: Helper methods for streamlining Par tests ----------------------------
+  
+//====== END: Prop companion object =============================================================
 }  
 
 case class Gen[+A](sample: State[RNG, A]){
@@ -137,9 +164,19 @@ case class Gen[+A](sample: State[RNG, A]){
  * a function that gets us from state s1:RNG to a pair (a, s2):(A, RNG).
  */
   
-  def map[B](f: A => B): Gen[B] = Gen(sample.map(f))
+  def map[B](f: A => B): Gen[B] = Gen(this.sample.map(f))
+  // Recall, the map method of State[S,A] class is
+  //   def map[B](f: A => B): State[S, B] = flatMap(a => unit(f(a)))
+  
+  def map2[B,C](g: Gen[B])(f: (A,B) => C): Gen[C] = 
+  	Gen(this.sample.map2(g.sample)(f))
+	// Recall, the map2 method of State[S,A] class has signature
+  //   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C]
 
-  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap[B](a => f(a).sample)) 
+  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(this.sample.flatMap[B](a => f(a).sample)) 
+
+  // f ** g is syntactic sugar for combining two generators f and g to produce a pair generator.
+  def **[B] (g: Gen[B]): Gen[(A,B)] = this.map2(g)((_,_))
 
   // Generate a Gen[List[A]] with length of list given by input parameter `size` 
   def listOfLength(n: Int): Gen[List[A]] = Gen.listOfLength(n, this)

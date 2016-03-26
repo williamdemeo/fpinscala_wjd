@@ -4,6 +4,7 @@
  */
 package fpinscala.testing
 import fpinscala.state._
+import fpinscala.parallelism._
 import Gen._
 import Prop._
  
@@ -52,5 +53,36 @@ object Ch08_testing {
    // Calling run with just one argument invokes the helper method with
    // default values 100, 100, RNG.Simple(System.currentTimeMillis))
 
+  // Ex 8.14 Write a property to verify the behavior of List.sorted.
+  def testIntListSort(ls: List[Int]): Boolean = {
+    val sortedList = ls.sorted
+    isSorted(sortedList)
+  }                                               //> testIntListSort: (ls: List[Int])Boolean
+  def isSorted(ls: List[Int]): Boolean = ls match {
+    case List() => true
+    case List(x) => true
+    case h::t => (h <= t.min) && isSorted(t)
+  }                                               //> isSorted: (ls: List[Int])Boolean
+  val sortPropertyTester = forAll(listOf(smallInt)) { ns => testIntListSort(ns) }
+                                                  //> sortPropertyTester  : fpinscala.testing.Prop = Prop(<function3>)
+  run(sortPropertyTester)                         //> + OK, passed 100 tests.
+  
+  //---------- Par tests ---------------------
+  // The old way:
+  val parProp_first_try = check {
+    val p1 = Par.map(Par.unit(1))(_ + 1)
+    val p2 = Par.unit(2)
+    p1(ES).get == p2(ES).get
+  }                                               //> parProp_first_try  : fpinscala.testing.Prop = Prop(<function3>)
+  run(parProp_first_try)                          //> + OK, proved property.
+
+  // The new way:
+  val parProp_second_try = provePar {
+    equal(
+      Par.map(Par.unit(1))(_ + 1),
+      Par.unit(2)
+    )
+  }                                               //> parProp_second_try  : fpinscala.testing.Prop = Prop(<function3>)
+  run(parProp_second_try)                         //> + OK, proved property.
 
 }
