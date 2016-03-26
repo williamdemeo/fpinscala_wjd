@@ -23,80 +23,107 @@ import Gen._
 import Prop._
 import java.util.concurrent.{Executors,ExecutorService}
 
-/* _Justification for the new type called `Return`_ (cf. p.133 of fpinscala)
- * Initially, the return type of a Prop was Option, with None returned in case of failure.
- * This seemed reasonable, but it was refined so we could get a message indicating reason for 
- * failure and an int showing how many tests passed before the failure.  The Either type seem
- * appropriate for this purpose.  Refining further, we decided that the number of tests to run should
- * be passed in to the Prop type itself.  Therefore, if all tests pass, there's no reason to report
- * the number of successes, since it will equal the input parameter in all such cases.  So, we are
- * back to the Option type.  But it's strange to use the Option type when we want None to denote 
- * success and Some((message, n)) to denote failure.  We want the return type of Prop to clearly 
- * represent our intention and the Option type seems to be the opposite of our intention.  So we give 
- * up on the built-in types and create our own that is the most appropriate return type for Prop. 
- * We name this type `Result.`
- */
-// Result type is the return type of a Prop's run method.
-sealed trait Result { def isFalsified: Boolean }
 
-// A Prop's run method returns Proved if there is only one thing to test and it passed.
-case object Proved extends Result { def isFalsified = false }
+// ---- begin: Prop class ------------------------------------------------------------------
+case class Prop( run: (MaxTestSize, NumberOfTests, RNG) => Result ) {
 
-// A Prop's run method will return the Passed object if the test passes.
-case object Passed extends Result { def isFalsified = false }
-
-// A Prop's run method will return a Falsified object in case of failure.
-case class Falsified (failure_string: FailedCase, 
-                      num_successful: SuccessCount) 
-                      extends Result { def isFalsified = true }
-
-
-case class Prop( run: (Int, RNG) => Result ) {
-  // Ex 8.9a Implement && for composing Prop values.
-  def &&(that: Prop): Prop = Prop ( (n, rng) => { 
-    val res1 = this.run(n,rng)
+	// Ex 8.9a Implement && for composing Prop values.
+  def &&(that: Prop): Prop = Prop ( (maxsize, numtests, rng) => { 
+    val res1 = this.run(maxsize, numtests, rng)
     res1 match {
-        case Passed => that.run(n,rng)
+        case Passed => that.run(maxsize, numtests, rng)
         case _ => res1
       } }
   )
   // Ex 8.9b Implement || for composing Prop values.
-  def ||(that: Prop): Prop = Prop ( (n, rng) => {
-    val res1 = this.run(n,rng)
+  def ||(that: Prop): Prop = Prop ( (maxsize, numtests, rng) => {
+    val res1 = this.run(maxsize, numtests, rng)
     res1 match {
         case Passed => res1
-        case _ => that.run(n,rng)
+        case _ => that.run(maxsize, numtests, rng)
       }   }
   )
   // Notice that in the case of failure we don't know which property was responsible, the left or 
   // the right. Can you devise a way of handling this? perhaps by allowing Prop values to be 
   // assigned a tag or label which gets displayed in the event of a failure?
 }
+// ---- end: Prop class ------------------------------------------------------------------
 
+//---- begin: Prop companion object ------------------------------------------------------
 object Prop {
-	type FailedCase = String // (type alias) this is the type of strings that describe a test failure
-	// This could be a message (possibly) indicating why a test failed.
-	type SuccessCount = Int  // (type alias) for int values indicating how many tests have passed
+	type FailedCase = String // (type alias) strings that describe a test failure (indicate why a test failed)
+	type SuccessCount = Int  // (type alias) how many tests have passed
+	type NumberOfTests = Int
+	type MaxTestSize = Int
 
-	def forAll[A](as: Gen[A])(predicate: A => Boolean): Prop = Prop {
-	  // Use randomStream to get random stream of A's, then zip that with a stream of ints to get a stream of 
-	  // pairs of type (A, Int). Then, take(n) from the stream of pairs apply the map which tests the predicate.
-	  (n, rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
-	    case (a, i) => try {
-	      if (predicate(a)) Passed else Falsified(a.toString, i)
-	    } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
-	  }.find(_.isFalsified).getOrElse(Passed)
-	}
+	// _Justification for the new type called `Return`_ (cf. p.133 of fpinscala)
+	// (notes about this moved to bottom of this file)
 
-	def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+	// Result type is the return type of a Prop's run method.
+	sealed trait Result { def isFalsified: Boolean }
+
+	// A Prop's run method returns Proved if there is only one thing to test and it passed.
+	case object Proved extends Result { def isFalsified = false }
+
+	// A Prop's run method will return the Passed object if the test passes.
+	case object Passed extends Result { def isFalsified = false }
+
+	// A Prop's run method will return a Falsified object in case of failure.
+	case class Falsified (failure_string: FailedCase, num_successful: SuccessCount) 
+		extends Result { 
+			def isFalsified = true 
+		}
+	
+	def apply(f: (NumberOfTests,RNG) => Result): Prop = Prop { (_,n,rng) => f(n,rng) }
+	
+	// helper method
+  def run(p: Prop,
+  	      maxSize: Int = 100,
+          testCases: Int = 100,
+          rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit =
+    p.run(maxSize, testCases, rng) match {
+      case Falsified(msg, n) =>
+        println(s"! Falsified after $n passed tests:\n $msg")
+      case Passed =>
+        println(s"+ OK, passed $testCases tests.")
+      case Proved =>
+        println(s"+ OK, proved property.")
+    }
+
+  //--- First implementation of forAll, for "static" test sizes ---
+	/* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
+  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
+    Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+
+  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
+    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+      case (a, i) => try {
+        if (f(a)) Passed else Falsified(a.toString, i)
+      } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+    }.find(_.isFalsified).getOrElse(Passed)
+  }
 	
 	def buildMsg[A](s: A, e: Exception): String =
 	  s"test case: $s\n" +
 	  s"generated an exception: ${e.getMessage}\n" +
 	  s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
-}
-
   
+
+	//--- Second implementation of forAll, for "dynamic" test sizes ---
+  def forAll[A](sg: SGen[A])(predicate: A => Boolean): Prop = forAll(sg.forSize)(predicate)
+
+	def forAll[A](g: Int => Gen[A])(predicate: A => Boolean): Prop = Prop {
+	  (maxSize, numTests, rng) => 
+	  	val casesPerSize = (numTests + (maxSize - 1 )) / maxSize
+	  	val props: Stream[Prop] = 
+	  		Stream.from(0).take((numTests min maxSize) + 1).map( i =>	forAll(g(i))(predicate))	
+  		val prop: Prop = props.map( p => 
+  			Prop { (mx, _, rng) => p.run(mx, casesPerSize, rng) } ).toList.reduce(_ && _)
+	  	prop.run(maxSize, numTests, rng)
+	}
+//---- end: Prop companion object -------------------------------------------------
+}  
+
 case class Gen[+A](sample: State[RNG, A]){
 /* Gen[A] is something that knows how to generate values of type A. It could randomly generate these values. 
  * We already developed an interface for a purely functional random number generator RNG (Ch. 6), and we 
@@ -110,13 +137,17 @@ case class Gen[+A](sample: State[RNG, A]){
  * a function that gets us from state s1:RNG to a pair (a, s2):(A, RNG).
  */
   
-  def map[A,B](f: A => B): Gen[B] = ???
+  def map[B](f: A => B): Gen[B] = Gen(sample.map(f))
 
-  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(this.sample.flatMap[B](a => f(a).sample)) 
+  def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap[B](a => f(a).sample)) 
 
-  def listOfSize(size: Int): Gen[List[A]] = Gen.listOfSizeN(size, this)
+  // Generate a Gen[List[A]] with length of list given by input parameter `size` 
+  def listOfLength(n: Int): Gen[List[A]] = Gen.listOfLength(n, this)
+  // alias to listOfSize function of the companion object
 
-  def listOfN(gsize: Gen[Int]): Gen[List[A]] = gsize flatMap(n => this.listOfSize(n))
+  // Generate a Gen[List[A]] with length of list generated by the given int generator.
+  def listOfGeneratedLength(glen: Gen[Int]): Gen[List[A]] = 
+  	glen flatMap(n => this.listOfLength(n))
   
   // Ex 8.10 Implement helper functions for converting Gen to SGen.
   def unsized: SGen[A] = SGen(_ => this)    
@@ -145,22 +176,28 @@ object Gen {
 
   def double: Gen[Double] = Gen(State(RNG.double))
   
-  def listOfSizeN[A](n: Int, g: Gen[A]): Gen[List[A]]= Gen(State.sequence(List.fill(n)(g.sample))) 
+  // Generate a Gen[List[A]] by repeated use of the given generator `g`.
+  // Length of list is given by input parameter `n` 
+  def listOfLength[A](n: Int, g: Gen[A]): Gen[List[A]]= 
+  	Gen(State.sequence(List.fill(n)(g.sample))) 
   // Here, List.fill(n)(g.sample) results in (g.sample, g.sample, ..., g.sample): List[State[S,A]].
-	/* This would certainly be a useful combinator, but not having to explicitly specify sizes is powerful 
-   * as well. It means that whatever function runs the tests has the freedom to choose test case sizes, 
-   * which opens up the possibility of doing the test case minimization we mentioned earlier. If the sizes 
-   * are always fixed and specified by the programmer, the test runner won't have this flexibility.
-   */
+
+  // Ex 8.12 Implement a listOf combinator that doesn't accept an explicit length. It should return an
+  // SGen instead of a Gen. The implementation should generate lists of the requested size.
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfLength(n))
+  
+  // Ex 8.13 Define listOf1 for generating nonempty lists, and then update your specification of
+  // max to use this generator.
+  def nonEmptyListOf[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfLength(n max 1)) 
 
     
   // p.131: If we can generate a single Int in some range, do we need a new primitive to 
   // generate an (Int,Int) pair in some range? Answer: No, we don't need new primitives.
   // It's very easy to get a list of two random integers in the interval [a,b):
-  def intListOfTwoInts(a: Int, b: Int): Gen[List[Int]] = listOfSizeN[Int](2, choose(a,b))  
+  def intListOfTwoInts(a: Int, b: Int): Gen[List[Int]] = listOfLength[Int](2, choose(a,b))  
   // It's only slightly harder to get a pair of two random integers in the interval [a,b):
   def intPair(a: Int, b: Int): Gen[(Int,Int)] = 
-    Gen(listOfSizeN[Int](2, choose(a,b)).sample.map{ case List(x,y) => (x,y) })  
+    Gen(listOfLength[Int](2, choose(a,b)).sample.map{ case List(x,y) => (x,y) })  
 
   // p.131: Can we produce a Gen[Option[A]] from a Gen[A]? Answer: yes.
   def genToOpt[A](g: Gen[A]): Gen[Option[A]] = Gen(g.sample.map[Option[A]](a => Some(a)))
@@ -193,14 +230,14 @@ object Gen {
 
 case class SGen[+A](forSize: Int => Gen[A]){
 
+	//def apply(n: Int): Gen[A] = forSize(n)
+	
   // Ex 8.11 SGen supports many of the same ops as Gen. Define some convenience functions on SGen that 
   // simply delegate to the corresponding functions on Gen.
-  def flatMap[B](f: A => SGen[B]): SGen[B] = SGen(n => this.forSize(n).flatMap { x => f(x).forSize(n) })
+  def flatMap[B](f: A => SGen[B]): SGen[B] = 
+  	SGen(n => this.forSize(n).flatMap { x => f(x).forSize(n) })
   // Not sure if flatMap is correct.  Better check it.
 
-  // Ex.12 Implement a listOf combinator that doesn't accept an explicit size. It should return an
-  // SGen instead of a Gen. The implementation should generate lists of the requested size.
-  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfSize(n))
 
   
 }
@@ -250,5 +287,41 @@ case class SGen[+A](forSize: Int => Gen[A]){
 
 
 
+/* Initially, the return type of a Prop was Option, with None returned in case of failure.
+ * This seemed reasonable, but it was refined so we could get a message indicating reason for 
+ * failure and an int showing how many tests passed before the failure.  The Either type seem
+ * appropriate for this purpose.  Refining further, we decided that the number of tests to run should
+ * be passed in to the Prop type itself.  Therefore, if all tests pass, there's no reason to report
+ * the number of successes, since it will equal the input parameter in all such cases.  So, we are
+ * back to the Option type.  But it's strange to use the Option type when we want None to denote 
+ * success and Some((message, n)) to denote failure.  We want the return type of Prop to clearly 
+ * represent our intention and the Option type seems to be the opposite of our intention.  So we give 
+ * up on the built-in types and create our own that is the most appropriate return type for Prop. 
+ * We name this type `Result.`
+ */
 
 
+/* Chapter 8 is clear up to Section 8.3, where the authors discuss test case minimization.
+ * They begin by referring to an abstract notion of size of a test case, and refer to the
+ * "smallest" or "simplest" test case. Then they introduce a new case class
+ * 
+ *    case class SGen[+A](forSize: Int => Gen[A])
+ *    
+ * which has a function forSize that accepts a test "size" and produces a generator of tests of that size.
+ * The problem is that the authors never clarify what size really means.        
+ */
+
+/* Old forAll code:
+ * Use randomStream to get random stream of A's, then zip that with a stream of ints to get a stream of 
+ * pairs of type (A, Int). Then, take(n) from the stream of pairs apply the map which tests the predicate.
+ * 
+ * def forAll[A](g: Int => Gen[A])(predicate: A => Boolean): Prop = Prop {
+ *     (n, rng) => randomStream(g)(rng).zip(Stream.from(0)).take(n).map {
+ *           case (a, i) => try {
+ *             if (predicate(a)) Passed else Falsified(a.toString, i)
+ *           } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+ *     }.find(_.isFalsified).getOrElse(Passed)
+ * }
+ * 
+ * def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+ */
