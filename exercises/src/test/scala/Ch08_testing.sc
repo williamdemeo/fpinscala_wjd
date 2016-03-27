@@ -13,19 +13,18 @@ object Ch08_testing {
   //--- A first batch of tests (cf. p. 137) ---
   // For this first run, we break it down into components for clarity.
   // Of course, this isn't necessary, and we'll reformulate the test(s) below more compactly.
-
+  // Also, type signature for each val below isn't required, but it helps document the code.
+  
   // Component 1. the primitive generator
-  // smallInt: Gen[Int]
-  val smallInt = Gen.choose(-10,10)               //> smallInt  : fpinscala.testing.Gen[Int] = Gen(State(<function1>))
+  val smallInt: Gen[Int] = Gen.choose(-10,10)     //> smallInt  : fpinscala.testing.Gen[Int] = Gen(State(<function1>))
   // generates random ints in [-10,10)
 
   // Component 2. the list generator
-  // intListGen: SGen[List[Int]]
-  val intListGen = nonEmptyListOf(smallInt)       //> intListGen  : fpinscala.testing.SGen[List[Int]] = SGen(<function1>)
-  // This one generates lists of int in [-10,10) by repeatedly calling on the generator smallInt.
+  val intListGen: SGen[List[Int]] = nonEmptyListOf(smallInt)
+                                                  //> intListGen  : fpinscala.testing.SGen[List[Int]] = SGen(<function1>)
+  // generates lists of int in [-10,10) by repeatedly calling the generator smallInt.
 
   // Component 3. a predicate
-  // P1: List[Int] => Boolean
   def P1(ns: List[Int]): Boolean = {
     val maxVal = ns.max
     !ns.exists(_ > maxVal)
@@ -33,8 +32,8 @@ object Ch08_testing {
   // We expect P1 to hold for all generated lists of ints.
   
   // Component 4. a property tester.
-  // propertyTester: Prop
-  val propertyTester = forAll(intListGen)(P1)     //> propertyTester  : fpinscala.testing.Prop = Prop(<function3>)
+  val propertyTester: Prop = forAll(intListGen)(P1)
+                                                  //> propertyTester  : fpinscala.testing.Prop = Prop(<function3>)
   // When we invoke this Prop's run method, it will checks that all examples generated
   // by intListGen satisfy the predicate P1.
     

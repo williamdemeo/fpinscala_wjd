@@ -15,6 +15,8 @@
  */
 package fpinscala.monoids
 
+import fpinscala.testing._
+import Prop._
 import fpinscala.parallelism.Nonblocking._
 import fpinscala.parallelism.Nonblocking.Par.toParOps // infix syntax for `Par.map`, `Par.flatMap`, etc
 
@@ -56,6 +58,7 @@ object Monoid {
   	val zero = true
   }
 
+  // Ex 10.2 Give a Monoid instance for combining Option values.
   def optionMonoid[A] = new Monoid[Option[A]] {
   	def op(a1: Option[A], a2: Option[A]) = (a1,a2) match {
   		case (Some(a), _) => Some(a)
@@ -65,27 +68,31 @@ object Monoid {
   	val zero = None 
   }
 
+  // Ex 10.3 A function having the same argument and return type is sometimes called an endofunction. 
+  // Write a monoid for endofunctions.
   def endoMonoid[A] = new Monoid[A => A] {
   	def op(f: A => A, g: A => A) = {a => f(g(a))}
   	def zero = {a => a}
   }
 
-  // TODO: Placeholder for `Prop`. Remove once you have implemented the `Prop`
-  // data type from Part 2.
-  //trait Prop {}
+	// Ex 10.4 Use the property-based testing framework we developed in part 2 to implement a
+	// property for the monoid laws. Use your property to test the monoids we’ve written.	
+  def monoidLawsPredicate[A](m: Monoid[A])(t: (A,A,A)): Boolean =	t match { 
+  	case (a,b,c) => {
+  		(m.op(m.op(a, b),c) == m.op(a, m.op(b,c))) && // associative
+  		(m.op(a, m.zero)== a) && (m.op(m.zero,a)==a)  // identity
+		}
+  }
+  def monoidLaws_first_try[A](m: Monoid[A], gen: Gen[A]): Prop =
+  	forAll(Gen.triple(gen))(monoidLawsPredicate(m))
 
-  // TODO: Placeholder for `Gen`. Remove once you have implemented the `Gen`
-  // data type from Part 2.
-
-  import fpinscala.testing._
-  import Prop._
-  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =sys.error("todo") 
-  	//provePar {
-  	// associative law:
-  	//equal(op(op(a, b),c), op(a, op(b,c))) &&
-  	//equal(op(a, zero), a) &&
-  	//equal(op(zero,a), a)
-	  //}
+  // Second try (not sure it's clearer, but it is more compact)
+  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =
+  	// associative law
+  	forAll(Gen.triple(gen))(t => 
+  		(m.op(m.op(t._1, t._2),t._3) == m.op(t._1, m.op(t._2, t._3)))) &&
+ 		// identity law
+  	forAll(gen)(a => (m.op(a, m.zero)== a) && (m.op(m.zero,a)==a))  
 
   def trimMonoid(s: String): Monoid[String] = sys.error("todo")
 

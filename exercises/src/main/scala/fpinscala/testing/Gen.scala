@@ -237,6 +237,11 @@ object Gen {
   def intPair(a: Int, b: Int): Gen[(Int,Int)] = 
     Gen(listOfLength[Int](2, choose(a,b)).sample.map{ case List(x,y) => (x,y) })  
 
+  // Generate triples of type A.
+  def triple[A](g: Gen[A]): Gen[(A,A,A)] = 
+    Gen(listOfLength[A](3, g).sample.map{ case List(x,y,z) => (x,y,z) })  
+    
+    
   // p.131: Can we produce a Gen[Option[A]] from a Gen[A]? Answer: yes.
   def genToOpt[A](g: Gen[A]): Gen[Option[A]] = Gen(g.sample.map[Option[A]](a => Some(a)))
   // p.131: What about a Gen[A] from a Gen[Option[A]]?  
