@@ -130,7 +130,7 @@ object Prop {
   val ES: ExecutorService = Executors.newCachedThreadPool
 
   // check is for proving properties or laws.
-  def check(p: => Boolean): Prop = Prop { (_, _, _) =>	if (p) Proved else Falsified("()", 0)  }
+  def check(p: => Boolean) = Prop { (_, _, _) =>	if (p) Proved else Falsified("()", 0)  }
 
 
   // Lift equality relation into Par using map2.
@@ -145,7 +145,8 @@ object Prop {
  		forAll(S ** g) { case (s,a) => f(a)(s).get }
 
   def checkPar(p: Par[Boolean]): Prop = forAllPar(Gen.unit(()))(_ => p)
-  def provePar(p: Par[Boolean]): Prop = Prop { (_,_,_) =>	if (p(ES).get) Proved else Falsified("()", 0)  }
+  def provePar(p: Par[Boolean]) = Prop { (_,_,_) =>	
+  	if (p(ES).get) Proved else Falsified("()", 0)  }
   //---- END: Helper methods for streamlining Par tests ----------------------------
   
 //====== END: Prop companion object =============================================================

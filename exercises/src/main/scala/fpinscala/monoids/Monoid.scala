@@ -1,3 +1,18 @@
+/* File: Monoid.scala (Ch 10)
+ * Authors: Paul Chiusano and Runar Bjarnason
+ * Url: https://github.com/fpinscala/fpinscala 
+ * 
+ * Description: This is a modified version of the file Monoid.scala
+ *   that accompanies the book "Functional Programming in Scala" by
+ *   Chiusano and Bjarnason. This version of the file includes 
+ *   solutions to some of the exercises in 
+ * 
+ *     CHAPTER 10: Monoids
+ * 
+ *   The solutions herein are by William DeMeo <williamdemeo@gmail.com>.
+ *   They are at best imperfect, and possibly wrong.  Official solutions by 
+ *   Chiusano and Bjarnason are available in the github repo mentioned above.
+ */
 package fpinscala.monoids
 
 import fpinscala.parallelism.Nonblocking._
@@ -20,28 +35,57 @@ object Monoid {
     val zero = Nil
   }
 
-  val intAddition: Monoid[Int] = sys.error("todo")
+  // Ex 10.1 Give Monoid instances for integer add and multiply as well as Boolean operators.
+  val intAdd = new Monoid[Int] {
+  	def op(a1: Int, a2: Int) = a1+a2
+  	val zero = 0
+  }
 
-  val intMultiplication: Monoid[Int] = sys.error("todo")
+  val intMultiplication = new Monoid[Int] {
+  	def op(a1: Int, a2: Int) = a1*a2
+  	val zero = 1
+  }
 
-  val booleanOr: Monoid[Boolean] = sys.error("todo")
+  val booleanOr = new Monoid[Boolean]{
+  	def op(a1: Boolean, a2: Boolean) = a1 || a2
+  	val zero = false
+  }
 
-  val booleanAnd: Monoid[Boolean] = sys.error("todo")
+  val booleanAnd = new Monoid[Boolean] {
+  	def op(a1: Boolean, a2: Boolean) = a1 && a2
+  	val zero = true
+  }
 
-  def optionMonoid[A]: Monoid[Option[A]] = sys.error("todo")
+  def optionMonoid[A] = new Monoid[Option[A]] {
+  	def op(a1: Option[A], a2: Option[A]) = (a1,a2) match {
+  		case (Some(a), _) => Some(a)
+  		case (None, Some(b)) => Some(b)
+  		case (None, None) => None
+  	}
+  	val zero = None 
+  }
 
-  def endoMonoid[A]: Monoid[A => A] = sys.error("todo")
+  def endoMonoid[A] = new Monoid[A => A] {
+  	def op(f: A => A, g: A => A) = {a => f(g(a))}
+  	def zero = {a => a}
+  }
 
   // TODO: Placeholder for `Prop`. Remove once you have implemented the `Prop`
   // data type from Part 2.
-  trait Prop {}
+  //trait Prop {}
 
   // TODO: Placeholder for `Gen`. Remove once you have implemented the `Gen`
   // data type from Part 2.
 
   import fpinscala.testing._
   import Prop._
-  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop = sys.error("todo")
+  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =sys.error("todo") 
+  	//provePar {
+  	// associative law:
+  	//equal(op(op(a, b),c), op(a, op(b,c))) &&
+  	//equal(op(a, zero), a) &&
+  	//equal(op(zero,a), a)
+	  //}
 
   def trimMonoid(s: String): Monoid[String] = sys.error("todo")
 
