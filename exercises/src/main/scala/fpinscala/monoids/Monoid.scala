@@ -38,12 +38,12 @@ object Monoid {
   }
 
   // Ex 10.1 Give Monoid instances for integer add and multiply as well as Boolean operators.
-  val intAdd = new Monoid[Int] {
+  val intAdditive = new Monoid[Int] {
   	def op(a1: Int, a2: Int) = a1+a2
   	val zero = 0
   }
 
-  val intMultiplication = new Monoid[Int] {
+  val intMultiplicative = new Monoid[Int] {
   	def op(a1: Int, a2: Int) = a1*a2
   	val zero = 1
   }

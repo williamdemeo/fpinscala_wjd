@@ -200,11 +200,10 @@ object Gen {
     // map(_+a) take that int to the interval [a, b), as desired.
     // This is simpler than the official solution.
 
-  /* It's hard not to get the impression that all these type aliases are obfuscating matters. 
-   * Wouldn't it be easier if we simply let Gen wrap a function of type RNG => (A, RNG), 
-   * rather than have it wrap a State that wraps a function of type RNG => (A, RNG)?  
-   * The problem with this seemingly simpler solution is that it doesn't allow us to use the 
-   * State class methods (like the map method we used above).
+  /* It seems all these type aliases are obfuscating matters. Wouldn't it be easier if we simply let 
+   * Gen wrap a function of type RNG => (A, RNG), rather than have it wrap a State that wraps a 
+   * function of type RNG => (A, RNG)? The problem with this seemingly simpler solution is that it 
+   * doesn't allow us to use the State class methods (like the map method we used above).
    */
   // Ex 8.5 Let's see what else we can implement using this representation of Gen . 
   // Try implementing unit, boolean, and listOfN.
