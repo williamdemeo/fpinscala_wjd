@@ -105,6 +105,10 @@ object Nonblocking {
     def sequence[A](as: List[Par[A]]): Par[List[A]] =
       map(sequenceBalanced(as.toIndexedSeq))(_.toList)
 
+    // Added parMap from Nonblocking.scala file in "answers" project.
+	  def parMap[A,B](as: IndexedSeq[A])(f: A => B): Par[IndexedSeq[B]] =
+      sequenceBalanced(as.map(asyncF(f)))      
+    
     // exercise answers
 
     /*
@@ -142,8 +146,13 @@ object Nonblocking {
     def chooser[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
       ???
 
+    //def flatMap[A,B](p: Par[A])(f: A => Par[B]): Par[B] =  ???
+    // Added flatMap from Nonblocking.scala file in "answers" project.
     def flatMap[A,B](p: Par[A])(f: A => Par[B]): Par[B] =
-      ???
+      es => new Future[B] {
+        def apply(cb: B => Unit): Unit =
+          p(es)(a => f(a)(es)(cb))
+      }  
 
     def choiceViaChooser[A](p: Par[Boolean])(f: Par[A], t: Par[A]): Par[A] =
       ???

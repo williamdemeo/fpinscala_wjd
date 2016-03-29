@@ -99,30 +99,62 @@ object Monoid {
   def concatenate[A](as: List[A], m: Monoid[A]): A =
     sys.error("todo")
 
-  def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B =
-    sys.error("todo")
+	// Ex 10.5 Implement foldMap.
+	def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = (as.map(f)).foldRight(m.zero)(m.op)
+  
+  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
 
-  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
-    sys.error("todo")
+  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B = as.foldLeft(z)(f)
 
-  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B =
-    sys.error("todo")
+	// Ex 10.6 (Hard) foldMap can be implemented using either foldLeft or foldRight. 
+  // But you can also write foldLeft and foldRight using foldMap! Try it.  
+  def foldRight_via_foldMap[A,B](as: List[A])(z: B)(f: (A,B) => B): B =
+	  foldMap(as, endoMonoid[B])(a => (b => f(a,b)))(z)
 
-  def foldMapV[A, B](as: IndexedSeq[A], m: Monoid[B])(f: A => B): B =
-    sys.error("todo")
+	// Ex 10.7 Implement a foldMap for IndexedSeq. Your implementation should use the strategy
+	// of splitting the sequence in two, recursively processing each half, and then adding the
+	// answers together with the monoid.
+	def foldMapV[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): B = 
+		if (v.size==0) m.zero
+		else if (v.size==1) f(v(0))
+		else {
+			val (l,r)=v.splitAt(v.length/2)
+			m.op(foldMapV(l, m)(f), foldMapV(r,m)(f))
+		}
 
-  def ordered(ints: IndexedSeq[Int]): Boolean =
-    sys.error("todo")
+	// Ex 10.8 (Hard) Implement a parallel version of foldMap using the library from ch 7. 
+	// Hint: Implement par, a combinator to promote Monoid[A] to a Monoid[Par[A]], and then 
+	// use this to implement parFoldMap.
+  def par[A](m: Monoid[A]): Monoid[Par[A]] = new Monoid[Par[A]] {
+  	def op(a1: Par[A], a2: Par[A]) = Par.map2(a1,a2)(m.op)
+  	def zero = Par.unit(m.zero)
+  }
 
+  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
+	  Par.flatMap(Par.parMap(v)(f)){ bs => 
+			foldMapV(bs,par(m))(b => Par.lazyUnit(b))
+		}
+
+  // Ex 10.9 (Hard) Use foldMap to detect whether a given IndexedSeq[Int] is ordered. 
+  // You'll need to come up with a creative Monoid.
+  // Hint: construct a type that keeps track of the _interval_ of values of a given segment
+  // as well as whether an unordered segment has been found.
+  def ordered(ints: IndexedSeq[Int]): Boolean = {
+  	val m = new Monoid[Option[(Int,Int,Boolean)]] {
+  		def op(a: Option[(Int,Int,Boolean)], b: Option[(Int,Int,Boolean)]) = (a,b) match {
+  			case (Some((a1,a2,x)), Some((b1,b2,y))) => Some((a1, b2, x && y && a2 <= b1))
+  			case (a, None) => a
+  			case (None, b) => b
+  		}
+  		val zero = None
+  	}
+  	foldMapV(ints, m)(i => Some((i,i,true))).map(_._3).getOrElse(true)
+  }
+  
   sealed trait WC
   case class Stub(chars: String) extends WC
   case class Part(lStub: String, words: Int, rStub: String) extends WC
 
-  def par[A](m: Monoid[A]): Monoid[Par[A]] = 
-    sys.error("todo")
-
-  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] = 
-    sys.error("todo") 
 
   val wcMonoid: Monoid[WC] = sys.error("todo")
 
