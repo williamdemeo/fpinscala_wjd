@@ -62,13 +62,11 @@ sealed trait Option[+A] {
 
   // now for the implementation that uses map and getOrElse:
   def flatMap[B](f: A => Option[B]): Option[B] =  map(f) getOrElse(None)
-  // Notice that since `f: A => Option[B]`, if x:Option[A], then
-  // x map(f): Option[Option[B]].  But we want to return an Option[B],
-  // so we must unravel it one level with getOrElse.
-  // This is a "flattening" because it composes two things, both of which
-  // can fail---the "this" and the function evaluation f(Some(a))---and
-  // instead of returning Option[Option[B]], it just returns Option[B],
-  // (hence, flattening).
+  // Notice that `f: A => Option[B]`. Therefore, if x:Option[A], then
+  // x map(f): Option[Option[B]]. We must unwrap this result one level in order to
+  // return an Option[B].  This is a "flattening" because it composes two things, 
+  // both of which can fail---the "this" and the function evaluation f(Some(a))---and
+  // instead of returning an Option[Option[B]], we return an Option[B] (hence, flattening).
   
   // orElse: Type B => Option[A] => Option[B] => Option[B]
   // orElse[B] takes this a: Option[A] and ob:Option[B] and returns

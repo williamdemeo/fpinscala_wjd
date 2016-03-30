@@ -14,7 +14,8 @@ object Ch10_monoids {
 	// property for the monoid laws. Use your property to test the monoids we've written.
 
 	// stringMonoid tests
-  // run(monoidLaws(stringMonoid,g))  // need to supply g: Gen[String]
+  run( monoidLaws( stringMonoid,Gen.stringGenN( choose(1,6) ) ) )
+                                                  //> + OK, passed 100 tests.
 
   // listMonoid tests
   // run(monoidLaws(listMonoid,g))  // need to supply g: Gen[List[A]] for some A

@@ -59,35 +59,41 @@ object Monoid {
   }
 
   // Ex 10.2 Give a Monoid instance for combining Option values.
-  def optionMonoid[A] = new Monoid[Option[A]] {
+  def optionMonoid_first_try[A] = new Monoid[Option[A]] {
   	def op(a1: Option[A], a2: Option[A]) = (a1,a2) match {
   		case (Some(a), _) => Some(a)
   		case (None, Some(b)) => Some(b)
   		case (None, None) => None
-  	}
+  	}   // This makes clear what op does, but a much more concise version 
+      	// uses orElse (see alternative below).
+  	val zero = None 
+  }
+  // Use the orElse combinator of the Option trait:
+  def optionMonoid[A] = new Monoid[Option[A]] {
+  	def op(a1: Option[A], a2: Option[A]) = a1 orElse a2
   	val zero = None 
   }
 
   // Ex 10.3 A function having the same argument and return type is sometimes called an endofunction. 
   // Write a monoid for endofunctions.
   def endoMonoid[A] = new Monoid[A => A] {
-  	def op(f: A => A, g: A => A) = {a => f(g(a))}
+  	def op(f: A => A, g: A => A) = f compose g // i.e., x => f(g(x))
   	def zero = {a => a}
   }
 
 	// Ex 10.4 Use the property-based testing framework we developed in part 2 to implement a
-	// property for the monoid laws. Use your property to test the monoids we’ve written.	
+	// property for the monoid laws. Use your property to test the monoids we've written.	
   def monoidLawsPredicate[A](m: Monoid[A])(t: (A,A,A)): Boolean =	t match { 
   	case (a,b,c) => {
   		(m.op(m.op(a, b),c) == m.op(a, m.op(b,c))) && // associative
   		(m.op(a, m.zero)== a) && (m.op(m.zero,a)==a)  // identity
 		}
   }
-  def monoidLaws_first_try[A](m: Monoid[A], gen: Gen[A]): Prop =
+  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =
   	forAll(Gen.triple(gen))(monoidLawsPredicate(m))
 
-  // Second try (not sure it's clearer, but it is more compact)
-  def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =
+  // Second try (I think the previous one is clearer)
+  def monoidLaws_alt[A](m: Monoid[A], gen: Gen[A]): Prop =
   	// associative law
   	forAll(Gen.triple(gen))(t => 
   		(m.op(m.op(t._1, t._2),t._3) == m.op(t._1, m.op(t._2, t._3)))) &&
@@ -155,8 +161,26 @@ object Monoid {
   case class Stub(chars: String) extends WC
   case class Part(lStub: String, words: Int, rStub: String) extends WC
 
+	// Ex 10.10 Write a monoid instance for WC and make sure that it meets the monoid laws.
 
-  val wcMonoid: Monoid[WC] = sys.error("todo")
+	// Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
+  // recursively splitting it into substrings and counting the words in those substrings.
+
+  val wcMonoid: Monoid[WC] = new Monoid[WC] {
+  	def op(a: WC, b: WC) = (a,b) match {
+  		case (Part(al, aw, ar), Part(bl, bw, br)) => {
+  			if((ar+bl).isEmpty) Part(al, aw+bw, br)
+  			else Part(al, aw+bw+1, br)
+  		}
+  		case (Stub(a), Stub(b)) => Stub(a+b)
+  		case (Stub(a), Part(l, w, r)) => Part(a+l, w, r)
+  		case (Part(l, w, r), Stub(b)) => Part(l, w, r+b)
+  	}
+  	// initially I used Stub("") for the zero...
+  	val zero = Stub("")
+		// ...but the hint says a Stub should never be empty, so I switched zero to
+  	// val zero = Part("", 0, "") ...then noticed the official answer also uses Stub("").
+  }
 
   def count(s: String): Int = sys.error("todo")
 

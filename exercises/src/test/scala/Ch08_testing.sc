@@ -15,6 +15,8 @@ object Ch08_testing {
   // Of course, this isn't necessary, and we'll reformulate the test(s) below more compactly.
   // Also, type signature for each val below isn't required, but it helps document the code.
   
+  val smallPosInt: Gen[Int] = Gen.choose(1,8)     //> smallPosInt  : fpinscala.testing.Gen[Int] = Gen(State(<function1>))
+
   // Component 1. the primitive generator
   val smallInt: Gen[Int] = Gen.choose(-10,10)     //> smallInt  : fpinscala.testing.Gen[Int] = Gen(State(<function1>))
   // generates random ints in [-10,10)
