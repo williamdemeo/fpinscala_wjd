@@ -3,8 +3,6 @@ randomly generating higher-order functions.  I've put this here
 so that GitHub will render the markdown (because this topic is 
 important to me).
 
-First, let's review some of the relevant section of the book.
-
 ### Testing higher-order functions
 So far, our library seems quite expressive, but there's one area where it's lacking: we
 don't currently have a good way to test higher-order functions. While we have lots of
