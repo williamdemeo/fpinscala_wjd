@@ -1,8 +1,9 @@
-Below is a copy of the book's answer to the open-ended Exercise 8.19 about 
-randomly generating higher-order functions.  I've copied it into a README.md 
-file so GitHub will render it because this topic is important to me.
+Below is the book's answer to the open-ended Exercise 8.19 about 
+randomly generating higher-order functions.  I've put this here
+so that GitHub will render the markdown (because this topic is 
+important to me).
 
-First, here's a small excerpt from the relevant section of the text:
+First, let's review some of the relevant section of the book.
 
 ### Testing higher-order functions
 So far, our library seems quite expressive, but there's one area where it's lacking: we
@@ -36,7 +37,7 @@ functions that simply ignore their input string and delegate to the underlying
 
 ~~~ Scala
 def genStringIntFn(g: Gen[Int]): Gen[String => Int] =
-g map (i => (s => i))
+  g map (i => (s => i))
 ~~~
 
 This approach isn't sufficient though. We're simply generating constant functions that
