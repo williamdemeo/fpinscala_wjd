@@ -200,14 +200,11 @@ object Gen {
     // map(_+a) take that int to the interval [a, b), as desired.
     // This is simpler than the official solution.
 
-  /* It seems all these type aliases are obfuscating matters. Wouldn't it be easier if we simply let 
-   * Gen wrap a function of type RNG => (A, RNG), rather than have it wrap a State that wraps a 
-   * function of type RNG => (A, RNG)? The problem with this seemingly simpler solution is that it 
-   * doesn't allow us to use the State class methods (like the map method we used above).
-   */
   // Ex 8.5 Let's see what else we can implement using this representation of Gen . 
   // Try implementing unit, boolean, and listOfN.
   def unit[A](a: => A): Gen[A] = Gen(State.unit[RNG,A](a)) // (Scala will infer the type of State.unit here.)
+
+  def integer: Gen[Int] = Gen(State(RNG.int))
 
   def boolean: Gen[Boolean] = Gen(State(RNG.boolean))
 
@@ -278,11 +275,67 @@ object Gen {
   def weighted[A](t1: (Gen[A],Double), t2: (Gen[A],Double)): Gen[A] = 
     double.flatMap[A]( x => if( x < t1._2 ) t1._1 else t2._1 )   
     
+/* Ex 8.18 Come up with some other properties that takeWhile should satisfy. 
+ * Can you think of a property expressing the relationship between takeWhile and dropWhile?
+ * Solution:
+ * First, let's record the example given in the book:
+ * Ex 1. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
+ *          s.takeWhile(f).forall(f)
+ * Here's my example:
+ * Ex 2. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
+ *          s.takeWhile(f) append s.dropWhile(f) == s
+ */
+
+/* We could take the approach of only examining particular arguments--i.e., specific 
+ * higher-order functions. For instance, here's a more specific property for takeWhile:
+ */ 
+ val isEven = (i: Int) => i%2 == 0 
+ val takeWhileProp =
+	 Prop.forAll(Gen.listOf(Gen.integer))(ns => ns.takeWhile(isEven).forall(isEven))
+/*                   
+ * This works, but is there a way we could let the testing framework handle generating
+ * functions to use with takeWhile? To make this concrete, let's suppose we have a Gen[Int] 
+ * and would like to produce a Gen[String => Int]. What are some ways we could do that? 
+ * Well, we could produce String => Int functions that simply ignore their input string and 
+ * delegate to the underlying Gen[Int] :
+ */ 
+ def genStringIntConstFn(g: Gen[Int]): Gen[String => Int] =
+	 g map (i => (s => i))
+          
+ /* This approach isn't sufficient though. We're simply generating constant functions that ignore 
+ * their input. In the case of takeWhile, where we need a function that returns a Boolean, this 
+ * will be a function that always returns true or always returns false---clearly not very 
+ * interesting for testing the behavior of our function.
+ */
+
+
+/* Ex 8.19 (Hard) We want to generate a function that uses its argument in some way to select which
+ * Int to return. Can you think of a good way of expressing this? This is a very open-ended and 
+ * challenging design exercise. See what you can discover about this problem and if there's a nice 
+ * general solution that you can incorporate into the library we've developed so far.
+ * 
+ * _Solution_  One possibility that's a little better than the constant function approach
+ * suggested above would be to take a Gen[Int], as well as specific function mapping String 
+ * to Int, as input and then use both to randomly generate the function; e.g., we could 
+ * multiply the return value of that function by the randomly generated Int, as shown here:
+ */ 
+ def genStringIntFn(g: Gen[Int])(f: String => Int): Gen[String => Int] =
+	 g map (i => (s => i*f(s)))
+
+ // Here's an example use: 
+ val fn: Gen[String => Int] = genStringIntFn(choose(-10,10))(_.length)
+ // (added type signature here just so Scala will complain if the type of fn is not as I expected.)
+ 
+ 
+
+
+
+
 }
 
 case class SGen[+A](forSize: Int => Gen[A]){
 
-	//def apply(n: Int): Gen[A] = forSize(n)
+	def apply(n: Int): Gen[A] = forSize(n)
 	
   // Ex 8.11 SGen supports many of the same ops as Gen. Define some convenience functions on SGen that 
   // simply delegate to the corresponding functions on Gen.
@@ -339,6 +392,8 @@ case class SGen[+A](forSize: Int => Gen[A]){
 
 
 
+
+// =========vvvvvvvvvv MISCELLANEOUS NOTES AND COMMENTS vvvvvvvvvvv=========
 /* Initially, the return type of a Prop was Option, with None returned in case of failure.
  * This seemed reasonable, but it was refined so we could get a message indicating reason for 
  * failure and an int showing how many tests passed before the failure.  The Either type seem
@@ -377,3 +432,10 @@ case class SGen[+A](forSize: Int => Gen[A]){
  * 
  * def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
  */
+
+
+  /* It seems all these type aliases are obfuscating matters. Wouldn't it be easier if we simply let 
+   * Gen wrap a function of type RNG => (A, RNG), rather than have it wrap a State that wraps a 
+   * function of type RNG => (A, RNG)? The problem with this seemingly simpler solution is that it 
+   * doesn't allow us to use the State class methods (like the map method we used above).
+   */

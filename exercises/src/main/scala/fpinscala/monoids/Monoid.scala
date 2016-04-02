@@ -163,9 +163,6 @@ object Monoid {
 
 	// Ex 10.10 Write a monoid instance for WC and make sure that it meets the monoid laws.
 
-	// Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
-  // recursively splitting it into substrings and counting the words in those substrings.
-
   val wcMonoid: Monoid[WC] = new Monoid[WC] {
   	def op(a: WC, b: WC) = (a,b) match {
   		case (Part(al, aw, ar), Part(bl, bw, br)) => {
@@ -181,6 +178,10 @@ object Monoid {
 		// ...but the hint says a Stub should never be empty, so I switched zero to
   	// val zero = Part("", 0, "") ...then noticed the official answer also uses Stub("").
   }
+
+  // Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
+  // recursively splitting it into substrings and counting the words in those substrings.
+
 
   def count(s: String): Int = sys.error("todo")
 

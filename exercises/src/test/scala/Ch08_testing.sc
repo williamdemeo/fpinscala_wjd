@@ -86,4 +86,5 @@ object Ch08_testing {
   }                                               //> parProp_second_try  : fpinscala.testing.Prop = Prop(<function3>)
   run(parProp_second_try)                         //> + OK, proved property.
 
+  
 }
