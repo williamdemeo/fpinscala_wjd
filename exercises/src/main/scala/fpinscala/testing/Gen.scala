@@ -274,63 +274,98 @@ object Gen {
   // generates values from each Gen with probability proportional to its weight.
   def weighted[A](t1: (Gen[A],Double), t2: (Gen[A],Double)): Gen[A] = 
     double.flatMap[A]( x => if( x < t1._2 ) t1._1 else t2._1 )   
+
     
-/* Ex 8.18 Come up with some other properties that takeWhile should satisfy. 
- * Can you think of a property expressing the relationship between takeWhile and dropWhile?
- * Solution:
- * First, let's record the example given in the book:
- * Ex 1. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
- *          s.takeWhile(f).forall(f)
- * Here's my example:
- * Ex 2. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
- *          s.takeWhile(f) append s.dropWhile(f) == s
- */
+	///////////////////////////////////////////////////////
+	//                                                   // 
+  //       How to Generate Functions at Random         //
+  //                                                   //
+  ///////////////////////////////////////////////////////
+  
+	/* Ex 8.18 Come up with some other properties that takeWhile should satisfy. 
+	 * Can you think of a property expressing the relationship between takeWhile and dropWhile?
+	 * Solution:
+	 * First, let's record the example given in the book:
+	 * Ex 1. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
+	 *          s.takeWhile(f).forall(f)
+	 * Here's my example:
+	 * Ex 2. For all s: List[A] and all f: A => Boolean, the following evaluates to true:
+	 *          s.takeWhile(f) append s.dropWhile(f) == s
+	 */
 
-/* We could take the approach of only examining particular arguments--i.e., specific 
- * higher-order functions. For instance, here's a more specific property for takeWhile:
- */ 
- val isEven = (i: Int) => i%2 == 0 
- val takeWhileProp =
-	 Prop.forAll(Gen.listOf(Gen.integer))(ns => ns.takeWhile(isEven).forall(isEven))
-/*                   
- * This works, but is there a way we could let the testing framework handle generating
- * functions to use with takeWhile? To make this concrete, let's suppose we have a Gen[Int] 
- * and would like to produce a Gen[String => Int]. What are some ways we could do that? 
- * Well, we could produce String => Int functions that simply ignore their input string and 
- * delegate to the underlying Gen[Int] :
- */ 
- def genStringIntConstFn(g: Gen[Int]): Gen[String => Int] =
-	 g map (i => (s => i))
+	// We could take the approach of only examining particular arguments--i.e., specific 
+	// higher-order functions. For instance, here's a more specific property for takeWhile:
+	val isEven = (i: Int) => i%2 == 0 
+ 	val takeWhileProp =
+ 		Prop.forAll(Gen.listOf(Gen.integer))(ns => ns.takeWhile(isEven).forall(isEven))
+
+	/* This works, but is there a way we could let the testing framework handle generating
+	 * functions to use with takeWhile? To make this concrete, let's suppose we have a Gen[Int] 
+	 * and would like to produce a Gen[String => Int]. What are some ways we could do that? 
+	 * Well, we could produce String => Int functions that simply ignore their input string and 
+	 * delegate to the underlying Gen[Int] :
+	 */ 
+ 	def genStringIntConstFn(g: Gen[Int]): Gen[String => Int] =
+ 		g map (i => (s => i))
           
- /* This approach isn't sufficient though. We're simply generating constant functions that ignore 
- * their input. In the case of takeWhile, where we need a function that returns a Boolean, this 
- * will be a function that always returns true or always returns false---clearly not very 
- * interesting for testing the behavior of our function.
- */
+	/* This approach isn't sufficient though. We're simply generating constant functions that ignore 	
+	 * their input. In the case of takeWhile, where we need a function that returns a Boolean, this 
+	 * will be a function that always returns true or always returns false---clearly not very 
+	 * interesting for testing the behavior of our function.
+	 */
 
+  /* Ex 8.19 (Hard) We want to generate a function that uses its argument in some way to select which
+	 * Int to return. Can you think of a good way of expressing this? This is a very open-ended and 
+	 * challenging design exercise. See what you can discover about this problem and if there's a nice 
+	 * general solution that you can incorporate into the library we've developed so far.
+	 * 
+	 * _Solution_  One very simple solution that's a little better than the constant function 
+	 * approach above would be to take as input a Gen[Int], as well as specific function mapping 
+	 * String to Int, and then use both of these inputs to randomly generate a function; e.g., we 
+	 * could multiply the return value of that function by the randomly generated Int, as follows:
+	 */ 
+	def genStringIntFn(g: Gen[Int])(f: String => Int): Gen[String => Int] =
+		g map (i => (s => i*f(s)))
 
-/* Ex 8.19 (Hard) We want to generate a function that uses its argument in some way to select which
- * Int to return. Can you think of a good way of expressing this? This is a very open-ended and 
- * challenging design exercise. See what you can discover about this problem and if there's a nice 
- * general solution that you can incorporate into the library we've developed so far.
- * 
- * _Solution_  One possibility that's a little better than the constant function approach
- * suggested above would be to take a Gen[Int], as well as specific function mapping String 
- * to Int, as input and then use both to randomly generate the function; e.g., we could 
- * multiply the return value of that function by the randomly generated Int, as shown here:
- */ 
- def genStringIntFn(g: Gen[Int])(f: String => Int): Gen[String => Int] =
-	 g map (i => (s => i*f(s)))
-
- // Here's an example use: 
- val fn: Gen[String => Int] = genStringIntFn(choose(-10,10))(_.length)
- // (added type signature here just so Scala will complain if the type of fn is not as I expected.)
+  // Here's an example use: 
+ 	val fn: Gen[String => Int] = genStringIntFn(choose(-10,10))(_.length)
+	//(added type signature here just so Scala will complain if the type of fn is not as I expected.)
  
+ 	// Another approach suggested in the hint given in the textbook companion is similar.  
+ 	// We could set the seed of the random int generator equal to the hashcode of the given string.
+ 	// Slightly more general, instead of using hashcode, specify the function you want here: 
+ 	def h[A](a:A): Long = ???
+ 	def genFn[A,B](g: Gen[B]): Gen[A => B] = Gen {
+	 	State { (rng: RNG) =>
+	 			val (seed, rng2) = rng.nextInt
+	 			val f = (a:A) => g.sample.run(RNG.Simple(seed.toLong ^ h(a)))._1
+	 			(f, rng2)
+	 	}
+ 	}
+
+	// We could make a trait to abstract out the h function needed in the implementation above.
+	// This is very simple minded and easy to understand, so we'll do it this way first, and 
+	// then maybe develop a more general solution later.
+
+	trait Seeder[-A] {
+		def seedFn : A => Long
+	} 
  
-
-
-
-
+	def genFn_from_seedFn[A,B](in: Seeder[A])(out: Gen[B]): Gen[A => B] = Gen {
+	 	State { (rng: RNG) =>
+	 			val (seed, rng2) = rng.nextInt
+	 			val f = (a:A) => out.sample.run(RNG.Simple(seed.toLong ^ in.seedFn(a)))._1
+	 			(f, rng2)
+		 	}
+ 	}
+ 
+	// Example use:
+	val seeder = new Seeder[String]{
+		def seedFn = (s:String) => s.hashCode.toLong
+	}
+	// This should give the same function generator as that discussed in the book companion.
+	def genStringFn[B](g: Gen[B]): Gen[String => B] =	genFn_from_seedFn[String,B](seeder)(g)
+	
 }
 
 case class SGen[+A](forSize: Int => Gen[A]){
