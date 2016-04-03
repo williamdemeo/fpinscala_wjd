@@ -36,8 +36,7 @@ object Ch06_state {
   
   //---- ints() tests -----------------------------------------------------------------
   // signature: ints(count: Int)(rng: RNG): (List[Int], RNG)
-  ints(5)(rng)                                    //> res5: (List[Int], fpinscala.state.RNG) = (List(1770001318, -2015756020, -34
-                                                  //| 0305902, -1281479697, 16159453),Simple(42))
+  ints(5)(rng)                                    //> res5: fpinscala.state.RNG.Rand[List[Int]] = <function1>
 
   //---- double_with_map() tests ---------------------------------------------------------------
   double_with_map(rng)                            //> res6: (Double, fpinscala.state.RNG) = (0.007524831686168909,Simple(10590259
@@ -54,4 +53,13 @@ object Ch06_state {
 	rollDie_first_try(Simple(5))._1           //> res15: Int = 0
 	rollDie_first_try(Simple(5))._1           //> res16: Int = 0
 	rollDie(Simple(5))._1                     //> res17: Int = 1
+	
+	
+	
+	
+	
+	
+	
+	
+	
 }

@@ -366,6 +366,18 @@ object Gen {
 	// This should give the same function generator as that discussed in the book companion.
 	def genStringFn[B](g: Gen[B]): Gen[String => B] =	genFn_from_seedFn[String,B](seeder)(g)
 	
+	// And finally, for the more general version, 
+	trait CoGen[-A] {
+		def sample(a: A, rng: RNG): RNG
+	}
+	
+	def fn[A,B](in: CoGen[A])(out: Gen[B]): Gen[A => B] = Gen {
+		State { (rng: RNG) =>
+			val (seed, rng2) = rng.nextInt
+			val f = (a: A) => out.sample.run(in.sample(a, rng))._1
+			(f,rng2) }
+	}
+	
 }
 
 case class SGen[+A](forSize: Int => Gen[A]){
