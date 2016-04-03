@@ -67,7 +67,7 @@ object Ch08_testing {
   }                                               //> isSorted: (ls: List[Int])Boolean
   val sortPropertyTester = forAll(listOf(smallInt)) { ns => testIntListSort(ns) }
                                                   //> sortPropertyTester  : fpinscala.testing.Prop = Prop(<function3>)
-  run(sortPropertyTester)                         //> + OK, passed 100 tests.
+  run(sortPropertyTester)
   
   //---------- Par tests ---------------------
   // The old way:
@@ -75,8 +75,8 @@ object Ch08_testing {
     val p1 = Par.map(Par.unit(1))(_ + 1)
     val p2 = Par.unit(2)
     p1(ES).get == p2(ES).get
-  }                                               //> parProp_first_try  : fpinscala.testing.Prop = Prop(<function3>)
-  run(parProp_first_try)                          //> + OK, proved property.
+  }
+  run(parProp_first_try)
 
   // The new way:
   val parProp_second_try = provePar {
@@ -84,8 +84,8 @@ object Ch08_testing {
       Par.map(Par.unit(1))(_ + 1),
       Par.unit(2)
     )
-  }                                               //> parProp_second_try  : fpinscala.testing.Prop = Prop(<function3>)
-  run(parProp_second_try)                         //> + OK, proved property.
+  }
+  run(parProp_second_try)
 
 
   // --------------------------------------------------------------------------------------------------
@@ -96,8 +96,7 @@ object Ch08_testing {
         val (seed, rng2) = rng.nextInt
         RNG.Simple(seed.toLong ^ s.hashCode.toLong)
       }
-  }                                               //> hashfngen: => fpinscala.testing.Gen.CoGen[String]{def sample(s: String,rng: 
-                                                  //| fpinscala.state.RNG): fpinscala.state.RNG.Simple}
+  }
   
   
 
