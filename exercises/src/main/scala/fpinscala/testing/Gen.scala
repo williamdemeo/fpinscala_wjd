@@ -98,7 +98,7 @@ object Prop {
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
     Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
 
-  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
+  def forAll[A](as: Gen[A])(f: A => Boolean) = Prop {
     (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
       case (a, i) => try {
         if (f(a)) Passed else Falsified(a.toString, i)
@@ -108,6 +108,39 @@ object Prop {
 	
 	def buildMsg[A](s: A, e: Exception): String =
 	  s"test case: $s\n" +
+	  s"generated an exception: ${e.getMessage}\n" +
+	  s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
+  
+
+	//--- First implementation of forAll, for "static" test sizes ---
+	/* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
+  def randomStreamWithPredicate[A,B](agen: Gen[A])(pred: Gen[A=>Boolean])(rng: RNG): 
+  	Stream[(A, A=>Boolean)] = Stream.unfold(rng){rng => 
+    	val (a, rng2) = agen.sample.run(rng)
+    	val (p, rng3) = pred.sample.run(rng2)
+    	Some((a,p),rng3)
+    }
+
+  def forAll2[A](as: Gen[A])(fs: Gen[A => Boolean]) = Prop {
+    (n,rng) => randomStreamWithPredicate(as)(fs)(rng).zip(Stream.from(0)).take(n).map {
+      case ((a,f), i) => try {
+        if (f(a)) Passed else Falsified((a,f).toString, i)
+      } catch { case e: Exception => Falsified(buildMsg2(a,f,e), i) }
+    }.find(_.isFalsified).getOrElse(Passed)
+  }
+
+  def forAll3[A](as: Gen[A])(preds: Gen[A => Boolean]) = Prop { (n,rng) =>
+  	// Start by generating a stream of properties to test:
+		val pStream = randomStream(as)(rng) map (a => forAll(preds)(p => p(a)) ) // each case returns a Prop
+		// Take the first n and, using && combinator, reduce them to a single conjunction: 
+  	val pConj = pStream.take(n).toList.reduce(_ && _)
+  	// Test the conjunction of n properties:
+	  pConj.run(n, n, rng)  // todo: get rid of dependence on MaxTestSize
+  }
+	
+	def buildMsg2[A](a: A, p: A=>Boolean, e: Exception): String =
+	  s"test case val: $a\n" +
+	  s"test case fun: $p\n" +
 	  s"generated an exception: ${e.getMessage}\n" +
 	  s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
   
