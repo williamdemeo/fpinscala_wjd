@@ -17,6 +17,14 @@ all satisfy a predicate. For instance, `List(1,2,3).takeWhile(_ < 3)` results in
 evaluates to `true`. That is, every element in the returned list satisfies the
 predicate. 
 
+(In the last paragraph, the `forall` in the expression `s.takeWhile(f).forall(f)` 
+is a method of the `List` and `Stream` classes of the Scala standard library. 
+Its signature is `def forall[A] (f: A => Boolean): Boolean`. So, in the expression
+`s.takeWhile(f).forall(f)`, first the list `s.takeWhile(f)` is constructed, 
+consisting of the longest prefix of `s` satisfying `f`.  Then `forall(f)` is run
+on the resulting list to test that each element satisfies `f`.  This is a *law* 
+that `takeWhile` must satisfy.)
+
 We could certainly take the approach of only examining particular arguments when
 testing higher-order functions. For instance, here's a more specific property for
 `takeWhile`:
@@ -46,9 +54,9 @@ false---clearly not very interesting for testing the behavior of our function.
 
 **EXERCISE 8.19**
 Hard: We want to generate a function that uses its argument in some way to select which
-Int to return. Can you think of a good way of expressing this? This is a very open-
-ended and challenging design exercise. See what you can discover about this problem
-and if there's a nice general solution that you can incorporate into the library we've
+Int to return. Can you think of a good way of expressing this? This is a very open-ended 
+and challenging design exercise. See what you can discover about this problem and if 
+there's a nice general solution that you can incorporate into the library we've
 developed so far.
 
 ### Solution to Ex 8.19
