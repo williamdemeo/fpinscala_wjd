@@ -17,12 +17,12 @@ all satisfy a predicate. For instance, `List(1,2,3).takeWhile(_ < 3)` results in
 evaluates to `true`. That is, every element in the returned list satisfies the
 predicate. 
 
-(In the last paragraph, the `forall` in the expression `s.takeWhile(f).forall(f)` 
+(In the last paragraph, `forall` in the expression `s.takeWhile(f).forall(f)` 
 is a method of the `List` and `Stream` classes of the Scala standard library. 
 Its signature is `def forall[A] (f: A => Boolean): Boolean`. So, in the expression
 `s.takeWhile(f).forall(f)`, first the list `s.takeWhile(f)` is constructed, 
 consisting of the longest prefix of `s` satisfying `f`.  Then `forall(f)` is run
-on the resulting list to test that each element satisfies `f`.  This is a *law* 
+on the result to test that each element satisfies `f`.  This is a *law* 
 that `takeWhile` must satisfy.)
 
 We could certainly take the approach of only examining particular arguments when
