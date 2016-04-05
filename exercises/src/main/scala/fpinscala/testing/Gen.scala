@@ -112,15 +112,17 @@ object Prop {
 	  s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
   
 
-	//--- First implementation of forAll, for "static" test sizes ---
-	/* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
+	//--- We could also add a random predicate generator...
   def randomStreamWithPredicate[A,B](agen: Gen[A])(pred: Gen[A=>Boolean])(rng: RNG): 
   	Stream[(A, A=>Boolean)] = Stream.unfold(rng){rng => 
     	val (a, rng2) = agen.sample.run(rng)
     	val (p, rng3) = pred.sample.run(rng2)
     	Some((a,p),rng3)
     }
-
+  // ...this would allow us to run forAll on generated A's *and* generated predicates.
+  // It might seem weird because, usually, we have a specific prediate in mind that
+  // we're trying to test on lots of randomly generated data. However... (this remark
+  // is continued at bottom of this file)
   def forAll2[A](as: Gen[A])(fs: Gen[A => Boolean]) = Prop {
     (n,rng) => randomStreamWithPredicate(as)(fs)(rng).zip(Stream.from(0)).take(n).map {
       case ((a,f), i) => try {
@@ -224,6 +226,8 @@ case class Gen[+A](sample: State[RNG, A]){
   def unsized: SGen[A] = SGen(_ => this)    
 }
 
+
+//==== begin: Gen companion object ======================================
 object Gen {
   // Ex 8.4 Implement Gen.choose which generates ints in the range [start, stopExclusive).
   def choose(start: Int, stopExclusive: Int): Gen[Int] = 
@@ -411,7 +415,8 @@ object Gen {
 			(f,rng2) }
 	}
 	
-}
+} //==== end: Gen companion object ======================================
+
 
 case class SGen[+A](forSize: Int => Gen[A]){
 
@@ -422,8 +427,6 @@ case class SGen[+A](forSize: Int => Gen[A]){
   def flatMap[B](f: A => SGen[B]): SGen[B] = 
   	SGen(n => this.forSize(n).flatMap { x => f(x).forSize(n) })
   // Not sure if flatMap is correct.  Better check it.
-
-
   
 }
 
@@ -518,4 +521,16 @@ case class SGen[+A](forSize: Int => Gen[A]){
    * Gen wrap a function of type RNG => (A, RNG), rather than have it wrap a State that wraps a 
    * function of type RNG => (A, RNG)? The problem with this seemingly simpler solution is that it 
    * doesn't allow us to use the State class methods (like the map method we used above).
+   */
+
+
+  /* Remarks on motivation for random generation of higher-order functions. As mentioned above, 
+   * the purpose of forAll2 is to run forAll on generated A's *and* generated predicates. 
+   * It might seem weird because, usually, we have a specific prediate in mind that
+   * we're trying to test on lots of randomly generated data. However, consider the example on 
+   * page 142. To test the takeWhile function, we want to check that for every list 
+   * ls: List[A], and for every predicate f: A => Boolean, the expression
+   *    ls.takeWhile(f).forall(f) 
+   * results in true. In this case, a random generator of higher-order functions, like 
+   * f: A => Boolean, is precisely what we need.
    */

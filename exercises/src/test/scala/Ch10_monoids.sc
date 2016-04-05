@@ -36,6 +36,8 @@ object Ch10_monoids {
                                                   //> + OK, passed 100 tests.
 
   //---- endoMonoid TESTS ----------------------------------------
+  // Earlier we left off here with the Monoid tests because we didn't know how
+  // to randomly generate endofunctions.  Now we know...
   // run( monoidLaws( endoMonoid[Int], g ))  // need to supply g: Gen[endoMonoid] ...how?
 
   // Some tests are based on this arbitrarily chosen number:
