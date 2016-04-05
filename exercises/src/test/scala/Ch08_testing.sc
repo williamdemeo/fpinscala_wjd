@@ -91,14 +91,37 @@ object Ch08_testing {
   // --------------------------------------------------------------------------------------------------
   //  Function Generation Tests
 
-  def hashfngen = new CoGen[String]{
+  def hashfnGen = new CoGen[String]{
       def sample(s: String, rng: RNG) = {
         val (seed, rng2) = rng.nextInt
         RNG.Simple(seed.toLong ^ s.hashCode.toLong)
       }
-  }                                               //> hashfngen: => fpinscala.testing.Gen.CoGen[String]{def sample(s: String,rng:
+  }                                               //> hashfnGen: => fpinscala.testing.Gen.CoGen[String]{def sample(s: String,rng:
                                                   //|  fpinscala.state.RNG): fpinscala.state.RNG.Simple}
- 
+  // intGen: use this to generate the first (`in`) argument of
+  // fn[Int,Boolean], for generating functions of type Int => Boolean.
+  val intGen = new CoGen[Int] {
+    def sample(n: Int, rng: RNG) = {
+      val (seed, rng2) = rng.nextInt
+      RNG.Simple(seed.toLong ^ n.toLong)
+    }
+  }                                               //> intGen  : fpinscala.testing.Gen.CoGen[Int]{def sample(n: Int,rng: fpinscala
+                                                  //| .state.RNG): fpinscala.state.RNG.Simple} = fpinscala.testing.Ch08_testing$$
+                                                  //| anonfun$main$1$$anon$2@58651fd0
+  // predGen: use this to generate Int predicates (functions of type Int => Boolean)
+  val predGen: Gen[Int=>Boolean] = fn[Int,Boolean]( intGen )( Gen.boolean )
+                                                  //> predGen  : fpinscala.testing.Gen[Int => Boolean] = Gen(State(<function1>))
+  
+  // Next: apply this to initial motivating example?
+  
+  // forAll3( ag: Gen[Int] )(
+  /* We want to check that for every list `ls: List[A]`, and for every predicate
+   * `f: A => Boolean`, the expression
+   *    ls.takeWhile(f).forall(f)
+   * results in true.
+   */
+      
+      
   
 
   

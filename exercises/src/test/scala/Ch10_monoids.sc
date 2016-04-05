@@ -71,7 +71,6 @@ object Ch10_monoids {
                                                   //> listOfStrings_generator  : fpinscala.testing.Gen[List[String]] = Gen(State(
                                                   //| <function1>))
   run( monoidLaws( listMonoid[String], listOfStrings_generator ) )
-                                                  //> + OK, passed 100 tests.
 
 
 

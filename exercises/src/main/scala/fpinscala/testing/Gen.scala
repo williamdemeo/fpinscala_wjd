@@ -160,7 +160,6 @@ object Prop {
 	  	prop.run(maxSize, numTests, rng)
 	}
   
-  
   //--- BEGIN: Helper methods for streamlining Par tests -------------------------------
   val ES: ExecutorService = Executors.newCachedThreadPool
 
@@ -381,8 +380,7 @@ object Gen {
  	}
 
 	// We could make a trait to abstract out the h function needed in the implementation above.
-	// This is very simple minded and easy to understand, so we'll do it this way first, and 
-	// then maybe develop a more general solution later.
+	// This is simple-minded/easy-to-understand. We'll generalize it later.
 
 	trait Seeder[-A] {
 		def seedFn : A => Long
