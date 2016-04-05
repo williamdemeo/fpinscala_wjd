@@ -46,7 +46,7 @@ object Ch08_testing {
       RNG.Simple(System.currentTimeMillis))       //> + OK, passed 50 tests.
 
   // Components 1 thru 4 can be rolled up into a very compact form:
-  val propertyTest_compact = forAll(nonEmptyListOf(Gen.choose(-10,10))) { ns =>
+  val propertyTest_compact: Prop = forAll(nonEmptyListOf(Gen.choose(-10,10))) { ns =>
     val maxVal = ns.max
     !ns.exists(_ > maxVal)
     }                                             //> propertyTest_compact  : fpinscala.testing.Prop = Prop(<function3>)
@@ -121,8 +121,8 @@ object Ch08_testing {
    * results in true.
    */
       
-      
+  //val takeWhileProp: Prop = Prop.forAll(Gen.listOf(Gen.integer))(ns =>
+  //  forAll(Gen.fn(intGen)(Gen.boolean))(f => ns.takeWhile(f).forall(f))
   
-
   
 }
