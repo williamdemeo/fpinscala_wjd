@@ -16,6 +16,8 @@
 package fpinscala.monoids
 
 import fpinscala.testing._
+import fpinscala.state._
+import Gen._
 import Prop._
 import fpinscala.parallelism.Nonblocking._
 import fpinscala.parallelism.Nonblocking.Par.toParOps // infix syntax for `Par.map`, `Par.flatMap`, etc
@@ -179,6 +181,32 @@ object Monoid {
   	// val zero = Part("", 0, "") ...then noticed the official answer also uses Stub("").
   }
 
+  // This is sloppy, but it works.  
+  // We learned a better way to compose RNG's so we don't have to pass them along.  Fix it.
+  def genPart(sg: Gen[String]): Gen[WC] = Gen {
+    State { (rng: RNG) =>
+        val (s1, rng1) = sg.sample.run(rng)
+        val (wc, rng2) = rng1.nextInt
+        val (s2, rng3) = sg.sample.run(rng2)
+        (new Part(s1, wc, s2), rng3)
+        } 
+  }
+
+  def genStub(sg: Gen[String]): Gen[WC] = Gen {
+  	State{ (rng: RNG) => 
+  		val (s1, rng1) = sg.sample.run(rng)
+  		(new Stub(s1), rng1)
+  	}
+  }
+  
+  // So we don't have to think about it, the next method supplies the string generator to 
+  // genPart for us, using an arbitrarily chosen max string length of 10.
+  val autoPart: Gen[WC] = genPart( Gen.stringGenN( choose(0, 10) ) )
+  val autoStub: Gen[WC] = genStub( Gen.stringGenN( choose(0, 10) ) )
+  // Finally, our WC generator, which gives equal weight to Parts and Stubs. (We'll generalize this below.)  
+  val genWC: Gen[WC] = union(autoPart, autoStub)
+
+  
   // Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
   // recursively splitting it into substrings and counting the words in those substrings.
 

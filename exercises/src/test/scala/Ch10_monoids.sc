@@ -44,25 +44,25 @@ object Ch10_monoids {
   val N = 10  // Fix this (i.e., make it less ad hoc)
                                                   //> N  : Int = 10
   //----  stringMonoid TESTS --------------------------------------------------------
-  val stringsOfLengthAtMostN_generator: Gen[String] =
-    Gen.stringGenN( choose(0, N) )                //> stringsOfLengthAtMostN_generator  : fpinscala.testing.Gen[String] = Gen(Sta
-                                                  //| te(<function1>))
-  run( monoidLaws( stringMonoid, stringsOfLengthAtMostN_generator ) )
+  val stringOfLengthAtMostN: Gen[String] =
+    Gen.stringGenN( choose(0, N) )                //> stringOfLengthAtMostN  : fpinscala.testing.Gen[String] = Gen(State(<functio
+                                                  //| n1>))
+  run( monoidLaws( stringMonoid, stringOfLengthAtMostN ) )
                                                   //> + OK, passed 100 tests.
 
   //---- listMonoid TESTS --------------------------------------------------------
   // ...for lists of booleans:
-  val listOfBooleans_generator: Gen[List[Boolean]] =
-    boolean listOfGeneratedLength( choose(0, N) ) //> listOfBooleans_generator  : fpinscala.testing.Gen[List[Boolean]] = Gen(Stat
-                                                  //| e(<function1>))
-  run( monoidLaws( listMonoid[Boolean], listOfBooleans_generator ) )
+  val listOfBooleans: Gen[List[Boolean]] =
+    boolean listOfGeneratedLength( choose(0, N) ) //> listOfBooleans  : fpinscala.testing.Gen[List[Boolean]] = Gen(State(<functio
+                                                  //| n1>))
+  run( monoidLaws( listMonoid[Boolean], listOfBooleans ) )
                                                   //> + OK, passed 100 tests.
 
   // ...for lists of doubles:
-  val listOfDoubles_generator: Gen[List[Double]] =
-    double listOfGeneratedLength( choose(0, N) )  //> listOfDoubles_generator  : fpinscala.testing.Gen[List[Double]] = Gen(State(
-                                                  //| <function1>))
-  run( monoidLaws( listMonoid[Double], listOfDoubles_generator ) )
+  val listOfDoubles: Gen[List[Double]] =
+    double listOfGeneratedLength( choose(0, N) )  //> listOfDoubles  : fpinscala.testing.Gen[List[Double]] = Gen(State(<function1
+                                                  //| >))
+  run( monoidLaws( listMonoid[Double], listOfDoubles ) )
                                                   //> + OK, passed 100 tests.
 
   // ...for lists of strings:
@@ -71,9 +71,16 @@ object Ch10_monoids {
                                                   //> listOfStrings_generator  : fpinscala.testing.Gen[List[String]] = Gen(State(
                                                   //| <function1>))
   run( monoidLaws( listMonoid[String], listOfStrings_generator ) )
+                                                  //> + OK, passed 100 tests.
 
-
-
-  // Ex 10.10b make sure the monoid instance for WC meets the monoid laws
+  /* Ex 10.10b make sure the monoid instance for WC meets the monoid laws
+   * To test monoid laws for wcMonoid, we will use our monoidLaws function, as above.
+   * To do so, we need wc_generator to pass to the second argument of monoidLaws.
+   * This is a pattern: if we instantiate a new Monoid[A], and we want to test the
+   * monoid laws using our moindLaws function, we need an ag: Gen[A].  In the present
+   * case, we need genWC: Gen[WC].  (This genWC is now implemented in Monoid.scala.)
+   */
+  run( monoidLaws( wcMonoid, genWC ) )            //> + OK, passed 100 tests.
+   
   
 }
