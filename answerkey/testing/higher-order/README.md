@@ -6,15 +6,16 @@ important to me).
 ### Testing higher-order functions
 So far, our library seems quite expressive, but there's one area where it's lacking: we
 don't currently have a good way to test higher-order functions. While we have lots of
-ways of generating data using our generators, we don't really have a good way of gen-
-erating functions.
+ways of generating data using our generators, we don't really have a good way of
+generating functions. 
 
-For instance, let's consider the takeWhile function defined for List and Stream .
-Recall that this function returns the longest prefix of its input whose elements all sat-
-isfy a predicate. For instance, `List(1,2,3).takeWhile(_ < 3)` results in `List(1,2)`. A
-simple property we'd like to check is that for any list, `s: List[A]`, and any 
-`f: A => Boolean`, the expression `s.takeWhile(f).forall(f)` evaluates to
-`true`. That is, every element in the returned list satisfies the predicate.
+For instance, let's consider the takeWhile function defined for `List` and `Stream`.
+Recall that this function returns the longest prefix of its input whose elements
+all satisfy a predicate. For instance, `List(1,2,3).takeWhile(_ < 3)` results in 
+`List(1,2)`. A simple property we'd like to check is that for any list, 
+`s: List[A]`, and any `f: A => Boolean`, the expression `s.takeWhile(f).forall(f)` 
+evaluates to `true`. That is, every element in the returned list satisfies the
+predicate. 
 
 We could certainly take the approach of only examining particular arguments when
 testing higher-order functions. For instance, here's a more specific property for
