@@ -80,7 +80,9 @@ object Ch10_monoids {
    * monoid laws using our moindLaws function, we need an ag: Gen[A].  In the present
    * case, we need genWC: Gen[WC].  (This genWC is now implemented in Monoid.scala.)
    */
-  run( monoidLaws( wcMonoid, genWC ) )            //> + OK, passed 100 tests.
+  //run( monoidLaws( wcMonoid, genWC ) )          //> + OK, passed 100 tests.
+                                                  //> + OK, passed 100 tests.
+  run( monoidLaws( wcMonoid, genWC_weighted ) )
    
   
 }

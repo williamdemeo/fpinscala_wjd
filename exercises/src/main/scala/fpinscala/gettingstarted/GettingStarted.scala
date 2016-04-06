@@ -1,4 +1,22 @@
+/* File: GettingStarted.scala (Ch 2)
+ * Authors: Paul Chiusano and Runar Bjarnason
+ * Url: https://github.com/fpinscala/fpinscala 
+ * 
+ * Description: This is a modified version of the file GettingStarted.scala
+ *   that accompanies the book "Functional Programming in Scala" by
+ *   Chiusano and Bjarnason. This version of the file includes 
+ *   solutions to some of the exercises in 
+ * 
+ *     CHAPTER 2: Getting Started
+ * 
+ *   The solutions herein are by William DeMeo <williamdemeo@gmail.com>.
+ *   They are at best imperfect, and possibly wrong.  Official solutions by 
+ *   Chiusano and Bjarnason are available in the github repo mentioned above.
+ */
+
 package fpinscala.gettingstarted
+
+import scala.annotation.tailrec
 
 // A comment!
 /* Another comment */
@@ -35,8 +53,19 @@ object MyModule {
   }
 
   // Exercise 1: Write a function to compute the nth fibonacci number
+  def fib(n: Int): Int = n match {
+  	case 0 => 1
+  	case 1 => 1
+  	case k if k>1 => fib(k-1) + fib(k-2) 
+  }
 
-  def fib(n: Int): Int = ???
+  def fib_tr(n: Int): Int = {
+  	@annotation.tailrec
+  	def fib_aux(n: Int, prev: Int, curr: Int): Int = 
+  		if(n==0) prev
+  		else fib_aux(n-1, curr, prev + curr)
+  	fib_aux(n,0,1)
+  }
 
   // This definition and `formatAbs` are very similar..
   private def formatFactorial(n: Int) = {
@@ -140,7 +169,14 @@ object PolymorphicFunctions {
 
   // Exercise 2: Implement a polymorphic function to check whether
   // an `Array[A]` is sorted
-  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = ???
+  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = {
+  	def isSorted_aux(n: Int): Boolean = { 
+  		if (n >= as.length-1) true 
+  		else if (gt(as(n),as(n+1))) isSorted_aux(n+1)
+  		else false
+  	}
+  	isSorted_aux(0)
+  }// This is just like the official solution, but I'm sorting in ascending order.
 
   // Polymorphic functions are often so constrained by their type
   // that they only have one implementation! Here's an example:
@@ -149,30 +185,40 @@ object PolymorphicFunctions {
     (b: B) => f(a, b)
 
   // Exercise 3: Implement `curry`.
+  /* Ex 2.3 Let's look at another example, currying, which converts a function f
+   * of two arguments into a function of one argument that partially applies f . Here 
+   * again there's only one implementation that compiles. Write this implementation.
+   */
+	def curry[A,B,C](f: (A, B) => C): A => (B => C) = (a:A) => (b:B) => f(a,b)
+	
+  // NB: The `Function2` trait has a `curried` method already
+
+	// Exercise 4: Implement `uncurry`
+	/* Ex 2.4 Implement uncurry, which reverses the transformation of curry . 
+	 * Note that since => associates to the right, A => (B => C) can be written 
+	 * as A => B => C.
+	 */
+  def uncurry[A,B,C](f: A => B => C): (A, B) => C = (a, b) => f(a)(b)
 
   // Note that `=>` associates to the right, so we could
   // write the return type as `A => B => C`
-  def curry[A,B,C](f: (A, B) => C): A => (B => C) =
-    ???
 
-  // NB: The `Function2` trait has a `curried` method already
 
-  // Exercise 4: Implement `uncurry`
-  def uncurry[A,B,C](f: A => B => C): (A, B) => C =
-    ???
+  /* NB: There is a method on the `Function` object in the standard library,
+   * `Function.uncurried` that you can use for uncurrying.
+   * 
+   * Note that we can go back and forth between the two forms. We can curry
+   * and uncurry and the two forms are in some sense "the same". In FP jargon,
+   * we say that they are _isomorphic_ ("iso" = same; "morphe" = shape, form),
+   * a term we inherit from ~category theory~ algebra.    
+   */
 
-  /*
-  NB: There is a method on the `Function` object in the standard library,
-  `Function.uncurried` that you can use for uncurrying.
-
-  Note that we can go back and forth between the two forms. We can curry
-  and uncurry and the two forms are in some sense "the same". In FP jargon,
-  we say that they are _isomorphic_ ("iso" = same; "morphe" = shape, form),
-  a term we inherit from category theory.
-  */
+  /* Let's look at a final example, function composition, which feeds the output 
+	 * of one function to the input of another function. Again, the implementation 
+	 * of this function is fully determined by its type signature.
+	 */ 
 
   // Exercise 5: Implement `compose`
-
-  def compose[A,B,C](f: B => C, g: A => B): A => C =
-    ???
+  // Ex 2.5: Implement the higher-order function that composes two functions.
+  def compose[A,B,C](f: B => C, g: A => B): A => C =  a => f(g(a))
 }

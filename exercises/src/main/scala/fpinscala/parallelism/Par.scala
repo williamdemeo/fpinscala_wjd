@@ -35,18 +35,18 @@ object Par {
   def fork[A](a: => Par[A]): Par[A] = 
     es => es.submit( new Callable[A] { def call = a(es).get } )
   /* This is the simplest and most natural implementation of `fork`, but there are some problems 
-   * with it--for one, the outer `Callable` will block waiting for the "inner" task to complete. 
+   * with it--for one, the outer `Callable` will block while waiting for the "inner" task to complete. 
    * Since this blocking occupies a thread in our thread pool, or whatever resource backs the 
    * `ExecutorService`, this implies that we're losing out on some potential parallelism. 
    * Essentially, we're using two threads when one should suffice. This is a symptom of a more 
-   * serious problem with the implementation, and we will discuss this later.
+   * serious problem with the implementation that we'll address later.
    */
 
-  // `lazyUnit` converts its argument to a Par[A] and then "p thunks" it. 
+  // `lazyUnit` converts its argument to a Par[A] and then "p-thunks" it. 
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
-  /* To be honest, I don't really see the point of lazyUnit. Isn't a UnitFuture "always done"?
-   * Why then mark it for (delayed) parallel computation in a separate logical thread with fork?
-   * (But see the asyncF method below.)
+  /* lazyUnit marks its argument (with unit) as the type of expression that might be involved in a 
+   * parallel computation, and then confirms (with fork) that it should indeed be evaluated in a 
+   * separate thread. See also: asyncF method below.
    */
   
   private case class UnitFuture[A](get: A) extends Future[A] {
@@ -125,7 +125,7 @@ object Par {
   def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
     val pas: List[Par[List[A]]] = as.map(asyncF((a:A) => if(f(a)) List(a) else List()))
     map(sequence(pas))(_.flatten)
-  } // (copied official solution)
+  }
 
   // Leibniz equality: 
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = p(e).get == p2(e).get
@@ -165,8 +165,8 @@ object Par {
    */
   def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] = es => choices(run(es)(key).get)(es)
   
-  // See if you can come up with a new and more general combinator in terms of which you can implement 
-  // choice, choiceN, and choiceMap.    
+  // See if you can come up with a new and more general combinator in terms of 
+  // which you can implement choice, choiceN, and choiceMap.    
   def mapPar[X,Y](x: Par[X])(f: X => Par[Y]): Par[Y] = es => f(run(es)(x).get)(es) 
   
   // Ex 7.13 Implement a new primitive chooser, and then use it to implement choice and choiceN.

@@ -15,6 +15,7 @@
  */
 package fpinscala.monoids
 
+import scala.language.higherKinds
 import fpinscala.testing._
 import fpinscala.state._
 import Gen._
@@ -66,8 +67,8 @@ object Monoid {
   		case (Some(a), _) => Some(a)
   		case (None, Some(b)) => Some(b)
   		case (None, None) => None
-  	}   // This makes clear what op does, but a much more concise version 
-      	// uses orElse (see alternative below).
+  	}   
+  	// This makes clear what op does, but a much more concise version uses orElse (see alternative below).
   	val zero = None 
   }
   // Use the orElse combinator of the Option trait:
@@ -159,9 +160,23 @@ object Monoid {
   	foldMapV(ints, m)(i => Some((i,i,true))).map(_._3).getOrElse(true)
   }
   
+  /**
+   * WC is a trait that could be useful in a program that counts words in a document.
+   */
   sealed trait WC
+  /**
+   * Stub is a string that models word segments.
+   * When we split up a file into parts, the ends of each part may contain partial words. 
+   * These partial words, or word segments, are what we call Stubs.
+   */
   case class Stub(chars: String) extends WC
-  case class Part(lStub: String, words: Int, rStub: String) extends WC
+  /**
+   * A Part object counts the words in a single part of a file. 
+   * We split up a file into parts, and each part is a `Part` instance, which has a `wc` field
+   * (the number of whole words in the part), an `lStub` (the partial 
+   * word at the beginning of the part), and an `rStub` (the partial word at the end of the part).
+   */
+  case class Part(lStub: String, wc: Int, rStub: String) extends WC
 
 	// Ex 10.10 Write a monoid instance for WC and make sure that it meets the monoid laws.
 
@@ -181,8 +196,11 @@ object Monoid {
   	// val zero = Part("", 0, "") ...then noticed the official answer also uses Stub("").
   }
 
-  // This is sloppy, but it works.  
-  // We learned a better way to compose RNG's so we don't have to pass them along.  Fix it.
+  /** 
+   * A generator for Part cases of WC.  This is sloppy, but it works. 
+   * There's a better way of composing RNG's without passing them along manually.
+   * @todo: fix this.    
+   */
   def genPart(sg: Gen[String]): Gen[WC] = Gen {
     State { (rng: RNG) =>
         val (s1, rng1) = sg.sample.run(rng)
@@ -192,6 +210,7 @@ object Monoid {
         } 
   }
 
+   // A generator for Stub cases of WC.
   def genStub(sg: Gen[String]): Gen[WC] = Gen {
   	State{ (rng: RNG) => 
   		val (s1, rng1) = sg.sample.run(rng)
@@ -203,8 +222,13 @@ object Monoid {
   // genPart for us, using an arbitrarily chosen max string length of 10.
   val autoPart: Gen[WC] = genPart( Gen.stringGenN( choose(0, 10) ) )
   val autoStub: Gen[WC] = genStub( Gen.stringGenN( choose(0, 10) ) )
-  // Finally, our WC generator, which gives equal weight to Parts and Stubs. (We'll generalize this below.)  
+  // Finally, our WC generator, which gives equal weight to Parts and Stubs.
+	// This was created for the sole purpose of testing that wcMonoid satisfies the monoid laws.  
   val genWC: Gen[WC] = union(autoPart, autoStub)
+
+  // Finally, our WC generator, which gives equal weight to Parts and Stubs.
+	// This was created for the sole purpose of testing that wcMonoid satisfies the monoid laws.  
+  val genWC_weighted: Gen[WC] = weighted((autoPart,.75), (autoStub,.25))
 
   
   // Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
