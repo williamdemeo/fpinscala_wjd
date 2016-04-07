@@ -200,8 +200,8 @@ case class Gen[+A](sample: State[RNG, A]){
  * 
  *   case class Gen[A](sample: State[RNG,A]) 
  * 
- * Recall `case class State[S,A](run: S => (A,S))` so the `sample` function wrapped inside a Gen should be
- * a function that gets us from state s1:RNG to a pair (a, s2):(A, RNG).
+ * Recall `case class State[S,A](run: S => (A,S))` so the `sample` object wrapped inside a Gen 
+ * has a run function that takes a rng1:RNG and gives back a pair (a, rng2): (A, RNG).
  */
   
   def map[B](f: A => B): Gen[B] = Gen(this.sample.map(f))
