@@ -12,7 +12,7 @@ object Ch06_state {
   //---- nonNegativeInt() tests ---------------------------------------------------------------
   // signature: nonNegativeInt(rng: RNG): (Int, RNG)
   nonNegativeInt(rng)                             //> res0: (Int, fpinscala.state.RNG) = (16159453,Simple(1059025964525))
-
+  
   //---- double() tests ---------------------------------------------------------------
   // signature: double(rng: RNG): (Double, RNG)
   double(rng)                                     //> res1: (Double, fpinscala.state.RNG) = (0.007524831686168909,Simple(105902596
