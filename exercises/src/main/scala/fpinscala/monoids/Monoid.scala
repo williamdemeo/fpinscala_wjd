@@ -297,7 +297,7 @@ trait Foldable[F[_]] {
   import Monoid._  // (not sure why we need this)
   def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B
   def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B
-  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B
+  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B = sys.error("todo")
   def concatenate[A](as: F[A])(m: Monoid[A]): A = foldLeft(as)(m.zero)(m.op)
   def toList[A](as: F[A]): List[A] = sys.error("todo")
 }
@@ -306,7 +306,7 @@ object ListFoldable extends Foldable[List] {
   // We simply defer to the original defs in the List companion object.
   def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
   // what's the difference between `as.foldRight(z)(f)` and `foldRight(as)(z)(f)` here?
-  override def foldRight_v2[A, B](as: List[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
+  def foldRight_v2[A, B](as: List[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
   override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B)= foldLeft(as)(z)(f)
   override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B = foldMap(as)(f)(mb)
 }
