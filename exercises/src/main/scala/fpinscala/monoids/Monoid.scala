@@ -67,10 +67,10 @@ object Monoid {
   		case (Some(a), _) => Some(a)
   		case (None, Some(b)) => Some(b)
   		case (None, None) => None
-  	}   
-  	// This makes clear what op does, but a much more concise version uses orElse (see alternative below).
+  	} // This implementation makes clear exactly what op does; but see more concise version below.
   	val zero = None 
   }
+
   // Use the orElse combinator of the Option trait:
   def optionMonoid[A] = new Monoid[Option[A]] {
   	def op(a1: Option[A], a2: Option[A]) = a1 orElse a2
@@ -79,9 +79,9 @@ object Monoid {
 
   // Ex 10.3 A function having the same argument and return type is sometimes called an endofunction. 
   // Write a monoid for endofunctions.
-  def endoMonoid[A] = new Monoid[A => A] {
-  	def op(f: A => A, g: A => A) = f compose g // i.e., x => f(g(x))
-  	def zero = {a => a}
+  def endoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
+  	def op(f: A => A, g: A => A) = f compose g // x -> f(g(x)) 
+  	val zero = (a:A) => a
   }
 
 	// Ex 10.4 Use the property-based testing framework we developed in part 2 to implement a
@@ -103,14 +103,46 @@ object Monoid {
  		// identity law
   	forAll(gen)(a => (m.op(a, m.zero)== a) && (m.op(m.zero,a)==a))  
 
+ 	// Not sure what trimMonoid is for. I don't think it's mentioned in the book.
   def trimMonoid(s: String): Monoid[String] = sys.error("todo")
 
-  def concatenate[A](as: List[A], m: Monoid[A]): A =
-    sys.error("todo")
-
-	// Ex 10.5 Implement foldMap.
+  /** Sec 10.2 Folding lists with monoids
+   *  Monoids have an intimate connection with lists. If you look at the signatures of 
+   *  foldLeft and foldRight on List, you might notice something about the argument types:
+   *      def foldRight[B](z: B)(f: (A, B) => B): B
+   *      def foldLeft[B](z: B)(f: (B, A) => B): B
+   *  What happens when A and B are the same type?
+   *      def foldRight(z: A)(f: (A, A) => A): A
+   *      def foldLeft(z: A)(f: (A, A) => A): A
+   *  The components of a monoid fit these argument types like a glove. So if we had a 
+   *  list of Strings, we could simply pass the op and zero of the `stringMonoid` in order 
+   *  to reduce the list with the monoid and concatenate all the strings:
+   *      val words = List("Hic", "Est", "Index")
+   *      val s = words.foldRight(stringMonoid.zero)(stringMonoid.op)
+   *  Results in "HicEstIndex", and we get the same result with foldLeft, by associativity.
+   *  `foldLeft` associates op to the left, whereas `foldRight` associates to the right. 
+   */
+  /* We can write a general function concatenate that folds a list with a monoid.
+   * More precisely, if we have a list whose elements inhabit a type A that can serve as
+   * the carrier of a monoid, then we can use the monoid's zero and binary op to perform a 
+   * fold:
+   */
+  def concatenate[A](as: List[A], m: Monoid[A]): A = as.foldLeft(m.zero)(m.op)
+  /* This shouldn't be called "concatenate."  Only for lists of strings or lists of lists
+   * will this act like a concatenation operation.  Otherwise, values will be folded up,
+   * and squashed. Do we call the sum of a list of ints "concatenation?"  I think "reduce" 
+   * is a much better name for this function. Just for fun, let's define reduce that does 
+   * exactly the same thing but, but use foldRight this time. (No difference by associativity.) 
+   */
+  def reduce[A](as: List[A], m: Monoid[A]): A = as.foldRight(m.zero)(m.op)
+    
+  /* But what if our list has an element type that doesn't have a Monoid instance? 
+   * Well, we can always map over the list to turn it into a type that does:
+   */
+  // Ex 10.5 Implement foldMap.
 	def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = (as.map(f)).foldRight(m.zero)(m.op)
-  
+  // (Left off here.  Next: check foldMap, foldRight, and foldLeft against the official solution.)
+	
   def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
 
   def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B = as.foldLeft(z)(f)
@@ -118,7 +150,10 @@ object Monoid {
 	// Ex 10.6 (Hard) foldMap can be implemented using either foldLeft or foldRight. 
   // But you can also write foldLeft and foldRight using foldMap! Try it.  
   def foldRight_via_foldMap[A,B](as: List[A])(z: B)(f: (A,B) => B): B =
-	  foldMap(as, endoMonoid[B])(a => (b => f(a,b)))(z)
+    foldMap(as, endoMonoid[B])(f.curried)(z)
+	  // Originally write this as follows:
+    //     foldMap(as, endoMonoid[B])(a => (b => f(a,b)))(z) 
+    // But a => b => f(a,b) is f.curried.
 
 	// Ex 10.7 Implement a foldMap for IndexedSeq. Your implementation should use the strategy
 	// of splitting the sequence in two, recursively processing each half, and then adding the
@@ -233,7 +268,7 @@ object Monoid {
   
   // Ex 10.11 Use the WC monoid to implement a function that counts words in a String by 
   // recursively splitting it into substrings and counting the words in those substrings.
-
+  // (skipping this for now)
 
   def count(s: String): Int = sys.error("todo")
 
@@ -248,50 +283,44 @@ object Monoid {
 
   def bag[A](as: IndexedSeq[A]): Map[A, Int] =
     sys.error("todo")
-}
 
+} // <<<<<<<<<<<<<<<<<<<< END: Monoid companion object <<<<<<<<<<<<<<<<<<<<
+
+/* Section 10.5 (p. 183)
+ * Here we're abstracting over a type constructor F , much like we did with the Parser 
+ * type in the previous chapter. We write it as F[_] , where the underscore indicates that F
+ * is not a type but a type constructor that takes one type argument. Just as functions of
+ * functions are called higher-order functions, `Foldable` and `F[_]` are both higher-order 
+ * type constructors, aka "higher-kinded types."
+ */
 trait Foldable[F[_]] {
-  import Monoid._
-
-  def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B =
-    sys.error("todo")
-
-  def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B =
-    sys.error("todo")
-
-  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B =
-    sys.error("todo")
-
-  def concatenate[A](as: F[A])(m: Monoid[A]): A =
-    sys.error("todo")
-
-  def toList[A](as: F[A]): List[A] =
-    sys.error("todo")
+  import Monoid._  // (not sure why we need this)
+  def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B
+  def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B
+  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B
+  def concatenate[A](as: F[A])(m: Monoid[A]): A = foldLeft(as)(m.zero)(m.op)
+  def toList[A](as: F[A]): List[A] = sys.error("todo")
 }
 
 object ListFoldable extends Foldable[List] {
-  override def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) =
-    sys.error("todo")
-  override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B) =
-    sys.error("todo")
-  override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B =
-    sys.error("todo")
+  // We simply defer to the original defs in the List companion object.
+  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
+  // what's the difference between `as.foldRight(z)(f)` and `foldRight(as)(z)(f)` here?
+  override def foldRight_v2[A, B](as: List[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
+  override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B)= foldLeft(as)(z)(f)
+  override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B = foldMap(as)(f)(mb)
 }
 
 object IndexedSeqFoldable extends Foldable[IndexedSeq] {
-  override def foldRight[A, B](as: IndexedSeq[A])(z: B)(f: (A, B) => B) =
-    sys.error("todo")
-  override def foldLeft[A, B](as: IndexedSeq[A])(z: B)(f: (B, A) => B) =
-    sys.error("todo")
-  override def foldMap[A, B](as: IndexedSeq[A])(f: A => B)(mb: Monoid[B]): B =
-    sys.error("todo")
+  // We simply defer to the original defs in the IndexedSeq companion object.
+  override def foldRight[A, B](as: IndexedSeq[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
+  override def foldLeft[A, B](as: IndexedSeq[A])(z: B)(f: (B, A) => B) = foldLeft(as)(z)(f)
+  override def foldMap[A, B](as: IndexedSeq[A])(f: A => B)(mb: Monoid[B]): B = foldMap(as)(f)(mb)
 }
 
 object StreamFoldable extends Foldable[Stream] {
-  override def foldRight[A, B](as: Stream[A])(z: B)(f: (A, B) => B) =
-    sys.error("todo")
-  override def foldLeft[A, B](as: Stream[A])(z: B)(f: (B, A) => B) =
-    sys.error("todo")
+  override def foldRight[A, B](as: Stream[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
+  override def foldLeft[A, B](as: Stream[A])(z: B)(f: (B, A) => B) = foldLeft(as)(z)(f)
 }
 
 sealed trait Tree[+A]
