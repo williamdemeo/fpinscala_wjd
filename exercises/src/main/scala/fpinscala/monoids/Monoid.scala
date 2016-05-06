@@ -25,7 +25,7 @@ import fpinscala.parallelism.Nonblocking.Par.toParOps // infix syntax for `Par.m
 
 trait Monoid[A] {
   def op(a1: A, a2: A): A
-  def zero: A
+  val zero: A
 }
 
 object Monoid {
@@ -45,11 +45,17 @@ object Monoid {
   	def op(a1: Int, a2: Int) = a1+a2
   	val zero = 0
   }
+  // Adding implicit declaration so that we don't have to mention the monoid and we can do
+  // `reduce(List(1,2,3))`, for example, instead of `reduce(List(1,2,3), m:Monoid[Int])`
+  implicit val IntAdditive = intAdditive
 
   val intMultiplicative = new Monoid[Int] {
   	def op(a1: Int, a2: Int) = a1*a2
   	val zero = 1
   }
+  // N.B. the following would make the implicit monoid for Int type ambiguous.
+  //     implicit val IntMultiplicative = intMultiplicative
+  // Define only use one implicit per ground type!
 
   val booleanOr = new Monoid[Boolean]{
   	def op(a1: Boolean, a2: Boolean) = a1 || a2
@@ -60,6 +66,10 @@ object Monoid {
   	def op(a1: Boolean, a2: Boolean) = a1 && a2
   	val zero = true
   }
+  implicit val BooleanAnd = booleanAnd
+  // booleanAnd will be the more commonly used Monoid structure over Boolean, because we often
+  // take the conjunction of a list of predicates, so the default fold should be conjunction.
+  
 
   // Ex 10.2 Give a Monoid instance for combining Option values.
   def optionMonoid_first_try[A] = new Monoid[Option[A]] {
@@ -85,7 +95,8 @@ object Monoid {
   }
 
 	// Ex 10.4 Use the property-based testing framework we developed in part 2 to implement a
-	// property for the monoid laws. Use your property to test the monoids we've written.	
+	// property for the monoid laws. Use your property to test the monoids we've written.
+  // (monoidLaws testing function defined below, but actual tests are in file Ch10_monoids.sc)
   def monoidLawsPredicate[A](m: Monoid[A])(t: (A,A,A)): Boolean =	t match { 
   	case (a,b,c) => {
   		(m.op(m.op(a, b),c) == m.op(a, m.op(b,c))) && // associative
@@ -95,10 +106,11 @@ object Monoid {
   def monoidLaws[A](m: Monoid[A], gen: Gen[A]): Prop =
   	forAll(Gen.triple(gen))(monoidLawsPredicate(m))
 
+  
   // Second try (I think the previous one is clearer)
   def monoidLaws_alt[A](m: Monoid[A], gen: Gen[A]): Prop =
   	// associative law
-  	forAll(Gen.triple(gen))(t => 
+  	forAll(Gen.triple(gen))(t =>     
   		(m.op(m.op(t._1, t._2),t._3) == m.op(t._1, m.op(t._2, t._3)))) &&
  		// identity law
   	forAll(gen)(a => (m.op(a, m.zero)== a) && (m.op(m.zero,a)==a))  
@@ -106,42 +118,41 @@ object Monoid {
  	// Not sure what trimMonoid is for. I don't think it's mentioned in the book.
   def trimMonoid(s: String): Monoid[String] = sys.error("todo")
 
-  /** Sec 10.2 Folding lists with monoids
-   *  Monoids have an intimate connection with lists. If you look at the signatures of 
-   *  foldLeft and foldRight on List, you might notice something about the argument types:
-   *      def foldRight[B](z: B)(f: (A, B) => B): B
-   *      def foldLeft[B](z: B)(f: (B, A) => B): B
-   *  What happens when A and B are the same type?
+  /* Sec 10.2 Folding lists with monoids
+   *  What happens in fold operations when A and B are the same type?
    *      def foldRight(z: A)(f: (A, A) => A): A
    *      def foldLeft(z: A)(f: (A, A) => A): A
-   *  The components of a monoid fit these argument types like a glove. So if we had a 
-   *  list of Strings, we could simply pass the op and zero of the `stringMonoid` in order 
-   *  to reduce the list with the monoid and concatenate all the strings:
-   *      val words = List("Hic", "Est", "Index")
-   *      val s = words.foldRight(stringMonoid.zero)(stringMonoid.op)
-   *  Results in "HicEstIndex", and we get the same result with foldLeft, by associativity.
-   *  `foldLeft` associates op to the left, whereas `foldRight` associates to the right. 
-   */
-  /* We can write a general function concatenate that folds a list with a monoid.
-   * More precisely, if we have a list whose elements inhabit a type A that can serve as
-   * the carrier of a monoid, then we can use the monoid's zero and binary op to perform a 
-   * fold:
+   *  The components of a monoid fit these argument types like a glove. 
+   * 
+   *  Indeed, we can write a general function `concatenate` (I prefer "reduce")
+   *  that folds a list with a monoid. More precisely, given a list with elements 
+   *  inhabiting a type A that can be given a monoid structure, we can use the 
+   *  (monoid) zero and binary op to perform a fold:
    */
   def concatenate[A](as: List[A], m: Monoid[A]): A = as.foldLeft(m.zero)(m.op)
   /* This shouldn't be called "concatenate."  Only for lists of strings or lists of lists
    * will this act like a concatenation operation.  Otherwise, values will be folded up,
-   * and squashed. Do we call the sum of a list of ints "concatenation?"  I think "reduce" 
-   * is a much better name for this function. Just for fun, let's define reduce that does 
-   * exactly the same thing but, but use foldRight this time. (No difference by associativity.) 
-   */
-  def reduce[A](as: List[A], m: Monoid[A]): A = as.foldRight(m.zero)(m.op)
+   * and squashed. I think "reduce" is a much better name for this. Also, we can clean
+   * this up using implicits.  Let's define `reduce` to behave just like concatenate but, 
+   * just for fun, we'll define it with foldRight, and we'll make it so we don't need to 
+   * mention the monoid when we use it. 
+   */ 
+  def reduce[A](as: List[A])(implicit m: Monoid[A]): A = as.foldRight(m.zero)(m.op)
+  // For more details about why/how this works, see for example:
+  //  https://tpolecat.github.io/2013/10/12/typeclass.html
+  // Now we should be able to simply do `reduce(List(1,2,3))`
     
-  /* But what if our list has an element type that doesn't have a Monoid instance? 
-   * Well, we can always map over the list to turn it into a type that does:
+  /* But what if we have a List[A] and the type A doesn't have a Monoid instance? 
+   * If we happen to have a function f: A => B where B is a Monoid instance, then
+   * we can first map the List[A] to a List[B], and then perform the fold.
    */
   // Ex 10.5 Implement foldMap.
-	def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = (as.map(f)).foldRight(m.zero)(m.op)
-  // (Left off here.  Next: check foldMap, foldRight, and foldLeft against the official solution.)
+	def foldMap_first_try[A, B](as: List[A], m: Monoid[B])(f: A => B): B = 
+	  (as.map(f)).foldRight(m.zero)(m.op)
+  // In fact, we don't even need to use map; we can get by with just foldRight.
+	def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = 
+	  as.foldRight(m.zero)((a,b) => m.op(f(a),b))
+  // Next: check foldMap, foldRight, and foldLeft against the official solution.
 	
   def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
 
@@ -171,7 +182,7 @@ object Monoid {
 	// use this to implement parFoldMap.
   def par[A](m: Monoid[A]): Monoid[Par[A]] = new Monoid[Par[A]] {
   	def op(a1: Par[A], a2: Par[A]) = Par.map2(a1,a2)(m.op)
-  	def zero = Par.unit(m.zero)
+  	val zero = Par.unit(m.zero)
   }
 
   def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
@@ -345,3 +356,20 @@ object OptionFoldable extends Foldable[Option] {
     sys.error("todo")
 }
 
+//---- OTHER NOTES (removed from code above and placed here to clean things up) ---------------
+  /* Sec 10.2 Folding lists with monoids
+   *  Monoids have an intimate connection with lists. If you look at the signatures of 
+   *  foldLeft and foldRight on List, you might notice something about the argument types:
+   *      def foldRight[B](z: B)(f: (A, B) => B): B
+   *      def foldLeft[B](z: B)(f: (B, A) => B): B
+   *  What happens when A and B are the same type?
+   *      def foldRight(z: A)(f: (A, A) => A): A
+   *      def foldLeft(z: A)(f: (A, A) => A): A
+   *  The components of a monoid fit these argument types like a glove. So if we had a 
+   *  list of Strings, we could simply pass the op and zero of the `stringMonoid` in order 
+   *  to reduce the list with the monoid and concatenate all the strings:
+   *      val words = List("Hic", "Est", "Index")
+   *      val s = words.foldRight(stringMonoid.zero)(stringMonoid.op)
+   *  Results in "HicEstIndex", and we get the same result with foldLeft, by associativity.
+   *  `foldLeft` associates op to the left, whereas `foldRight` associates to the right. 
+   */
