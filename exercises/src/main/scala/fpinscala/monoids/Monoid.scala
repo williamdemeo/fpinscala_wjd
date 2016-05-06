@@ -94,6 +94,15 @@ object Monoid {
   	val zero = (a:A) => a
   }
 
+  implicit def endoMonoid_i[A] = endoMonoid[A]
+  
+  // We can get the dual of any monoid just by flipping the `op`.
+  def dual[A](m: Monoid[A]): Monoid[A] = new Monoid[A] {
+    def op(x: A, y: A): A = m.op(y, x)
+    val zero = m.zero
+  }
+
+
 	// Ex 10.4 Use the property-based testing framework we developed in part 2 to implement a
 	// property for the monoid laws. Use your property to test the monoids we've written.
   // (monoidLaws testing function defined below, but actual tests are in file Ch10_monoids.sc)
@@ -153,7 +162,16 @@ object Monoid {
 	def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B = 
 	  as.foldRight(m.zero)((a,b) => m.op(f(a),b))
   // Next: check foldMap, foldRight, and foldLeft against the official solution.
-	
+
+  // This might be even better:
+	def foldMap_imp[A, B](as: List[A])(f: A => B)(implicit m: Monoid[B]): B = 
+	  as.foldRight(m.zero)((a,b) => m.op(f(a),b))
+  // So, if there's an implicit monoid instance defined for type B, then we can 
+	 // simply do `foldMap_imp(as)(f) instead of foldMap(as,m)(f)` 
+	  
+  // Next: check foldMap, foldRight, and foldLeft against the official solution.
+	  
+	  
   def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
 
   def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B = as.foldLeft(z)(f)
@@ -162,10 +180,22 @@ object Monoid {
   // But you can also write foldLeft and foldRight using foldMap! Try it.  
   def foldRight_via_foldMap[A,B](as: List[A])(z: B)(f: (A,B) => B): B =
     foldMap(as, endoMonoid[B])(f.curried)(z)
-	  // Originally write this as follows:
-    //     foldMap(as, endoMonoid[B])(a => (b => f(a,b)))(z) 
-    // But a => b => f(a,b) is f.curried.
 
+  // Same as above but using implicits (so we don't have to mention endoMonoid)
+  def foldRight_imp[A,B](as: List[A])(z: B)(f: (A,B) => B): B = {
+    val fmap =foldMap_imp(as)(f.curried)  // We can't simply use an anonymous function...  
+    fmap(z)                             // ...so use of implicits is not much of a win here.
+  }
+
+  def swap_curried[A,B,C](f: (B, A) => C) = (a: A) => (b:B) => f(b,a)
+  
+  def foldLeft_via_foldMap[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
+    foldMap(as, dual(endoMonoid[B]))(swap_curried(f))(z)
+
+  def foldLeft_via_foldMap_alt[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
+    foldMap(as, dual(endoMonoid[B]))((a:A) => (b:B) => f(b,a))(z)
+    
+// 
 	// Ex 10.7 Implement a foldMap for IndexedSeq. Your implementation should use the strategy
 	// of splitting the sequence in two, recursively processing each half, and then adding the
 	// answers together with the monoid.
@@ -306,32 +336,49 @@ object Monoid {
  */
 trait Foldable[F[_]] {
   import Monoid._  // (not sure why we need this)
-  def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B
-  def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B
-  def foldMap[A, B](as: F[A])(f: A => B)(mb: Monoid[B]): B = sys.error("todo")
+  // default implementations
+  def foldRight[A, B](as: F[A])(z: B)(f: (A, B) => B): B = 
+    foldMap(as)(f.curried)(endoMonoid[B])(z)
+
+  def foldLeft[A, B](as: F[A])(z: B)(f: (B, A) => B): B = 
+    foldMap(as)((a:A) => (b:B) => f(b,a))(dual(endoMonoid[B]))(z)
+
+  def foldMap[A, B](as: F[A])(f: A => B)(implicit mb: Monoid[B]): B =
+    foldRight(as)(mb.zero)((a:A, b:B) => mb.op(f(a), b))
+
   def concatenate[A](as: F[A])(m: Monoid[A]): A = foldLeft(as)(m.zero)(m.op)
-  def toList[A](as: F[A]): List[A] = sys.error("todo")
+
+  def reduce[A](as: F[A])(implicit m: Monoid[A]): A = foldLeft(as)(m.zero)(m.op)
+
+  def toList[A](as: F[A]): List[A] = foldRight(as)(List[A]())(_::_)
 }
 
 object ListFoldable extends Foldable[List] {
   // We simply defer to the original defs in the List companion object.
-  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
-  // what's the difference between `as.foldRight(z)(f)` and `foldRight(as)(z)(f)` here?
-  def foldRight_v2[A, B](as: List[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
-  override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B)= foldLeft(as)(z)(f)
-  override def foldMap[A, B](as: List[A])(f: A => B)(mb: Monoid[B]): B = foldMap(as)(f)(mb)
+  override def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
+  
+  override def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B) = foldLeft(as)(z)(f)
+  
+  override def foldMap[A, B](as: List[A])(f: A => B)(implicit mb: Monoid[B]): B = 
+    foldRight(as)(mb.zero)((a,b) => mb.op(f(a),b))
+    
+  override def toList[A](as: List[A]): List[A] = as
 }
 
 object IndexedSeqFoldable extends Foldable[IndexedSeq] {
-  // We simply defer to the original defs in the IndexedSeq companion object.
-  override def foldRight[A, B](as: IndexedSeq[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
-  override def foldLeft[A, B](as: IndexedSeq[A])(z: B)(f: (B, A) => B) = foldLeft(as)(z)(f)
-  override def foldMap[A, B](as: IndexedSeq[A])(f: A => B)(mb: Monoid[B]): B = foldMap(as)(f)(mb)
+  import Monoid._  // (not sure why we need this)
+  override def foldRight[A, B](as: IndexedSeq[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
+  
+  override def foldLeft[A, B](as: IndexedSeq[A])(z: B)(f: (B, A) => B) = as.foldLeft(z)(f)
+  
+  override def foldMap[A, B](as: IndexedSeq[A])(f: A => B)(implicit mb: Monoid[B]): B = 
+    foldMapV(as, mb)(f)
 }
 
 object StreamFoldable extends Foldable[Stream] {
-  override def foldRight[A, B](as: Stream[A])(z: B)(f: (A, B) => B) = foldRight(as)(z)(f)
-  override def foldLeft[A, B](as: Stream[A])(z: B)(f: (B, A) => B) = foldLeft(as)(z)(f)
+  override def foldRight[A, B](as: Stream[A])(z: B)(f: (A, B) => B) = as.foldRight(z)(f)
+
+  override def foldLeft[A, B](as: Stream[A])(z: B)(f: (B, A) => B) = as.foldLeft(z)(f)
 }
 
 sealed trait Tree[+A]
@@ -339,7 +386,7 @@ case class Leaf[A](value: A) extends Tree[A]
 case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
 
 object TreeFoldable extends Foldable[Tree] {
-  override def foldMap[A, B](as: Tree[A])(f: A => B)(mb: Monoid[B]): B =
+  override def foldMap[A, B](as: Tree[A])(f: A => B)(implicit mb: Monoid[B]): B =
     sys.error("todo")
   override def foldLeft[A, B](as: Tree[A])(z: B)(f: (B, A) => B) =
     sys.error("todo")
@@ -348,7 +395,7 @@ object TreeFoldable extends Foldable[Tree] {
 }
 
 object OptionFoldable extends Foldable[Option] {
-  override def foldMap[A, B](as: Option[A])(f: A => B)(mb: Monoid[B]): B =
+  override def foldMap[A, B](as: Option[A])(f: A => B)(implicit mb: Monoid[B]): B =
     sys.error("todo")
   override def foldLeft[A, B](as: Option[A])(z: B)(f: (B, A) => B) =
     sys.error("todo")
