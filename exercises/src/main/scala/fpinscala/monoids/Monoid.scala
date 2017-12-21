@@ -33,49 +33,53 @@ object Monoid {
   val stringMonoid = new Monoid[String] {
     def op(a1: String, a2: String) = a1 + a2
     val zero = ""
-  }
+  } // checked against official solution (identical)
 
   def listMonoid[A] = new Monoid[List[A]] {
     def op(a1: List[A], a2: List[A]) = a1 ++ a2
     val zero = Nil
-  }
+  } // checked against official solution (identical)
 
   //== EXERCISE 10.1 ============================================================
   // Give Monoid instances for integer add and multiply as well as Boolean operators.
   val intAdditive = new Monoid[Int] {
   	def op(a1: Int, a2: Int) = a1+a2
   	val zero = 0
-  }
-  // Adding implicit declaration so that we don't have to mention the monoid and we can do
-  // `reduce(List(1,2,3))`, for example, instead of `reduce(List(1,2,3), m:Monoid[Int])`
+  } // checked against official solution (equivalent)
+
+  // Adding implicit declaration so we don't have to mention the monoid; e.g., can do
+  // `reduce(List(1,2,3))` instead of `reduce(List(1,2,3), intAdditive)`
   implicit val IntAdditive = intAdditive
 
   val intMultiplicative = new Monoid[Int] {
   	def op(a1: Int, a2: Int) = a1*a2
   	val zero = 1
-  }
-  // N.B. the following would make the implicit monoid for Int type ambiguous.
-  //     implicit val IntMultiplicative = intMultiplicative
-  // Define only use one implicit per ground type!
+  } // checked against official solution (equivalent)
+
+  // WARNING: the following would make the implicit monoid for Int type ambiguous.
+  //     `implicit val IntMultiplicative = intMultiplicative`
+  // *** Define only use one implicit per ground type! ***
 
   val booleanOr = new Monoid[Boolean]{
   	def op(a1: Boolean, a2: Boolean) = a1 || a2
   	val zero = false
-  }
+  } // checked against official solution (equivalent)
 
   val booleanAnd = new Monoid[Boolean] {
   	def op(a1: Boolean, a2: Boolean) = a1 && a2
   	val zero = true
-  }
+  } // checked against official solution (equivalent)
   implicit val BooleanAnd = booleanAnd
-  // booleanAnd will be the more commonly used Monoid structure over Boolean, because we often
-  // take the conjunction of a list of predicates, so the default fold should be conjunction.
+  // booleanAnd is the more common Monoid structure over Boolean because we often take
+  // the conjunction of a list of predicates, so default fold should be conjunction; e.g.,
+  // `reduce(List(p1, p2, p3))` instead of `reduce(List(p1, p2, p3), booleanAnd)`
+  //
   //== END EXERCISE 10.1 ===========================================================
 
 
   //== EXERCISE 10.2 ===============================================================
   // Give a Monoid instance for combining Option values.
-  def optionMonoid_first_try[A] = new Monoid[Option[A]] {
+  def optionMonoid_first_try[A] : Monoid[Option[A]] = new Monoid[Option[A]] {
   	def op(a1: Option[A], a2: Option[A]) = (a1,a2) match {
   		case (Some(a), _) => Some(a)
   		case (None, Some(b)) => Some(b)
@@ -84,10 +88,11 @@ object Monoid {
   	val zero = None 
   }
   // Concise version using the orElse combinator of the Option trait:
-  def optionMonoid[A] = new Monoid[Option[A]] {
+  def optionMonoid[A] : Monoid[Option[A]] = new Monoid[Option[A]] {
   	def op(a1: Option[A], a2: Option[A]) = a1 orElse a2
   	val zero = None 
-  }
+  } // checked against official solution (equivalent)
+  //
   //== END EXERCISE 10.2 ======================================
 
 
@@ -98,15 +103,17 @@ object Monoid {
   def endoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
   	def op(f: A => A, g: A => A) = f compose g // x -> f(g(x)) 
   	val zero = (a:A) => a  // zero is the identity function
-  }
-  implicit def endoMonoid_i[A] = endoMonoid[A]
+  } // checked against official solution (equivalent)
+  //
   //== END EXERCISE 10.3 ======================================
+
+  implicit def endoMonoid_i[A] = endoMonoid[A]
 
   // We can get the dual of any monoid just by flipping the `op`.
   def dual[A](m: Monoid[A]): Monoid[A] = new Monoid[A] {
     def op(x: A, y: A): A = m.op(y, x)
     val zero = m.zero
-  }
+  } // checked against official solution (equivalent)
 
   //== EXERCISE 10.4 ===============================================================
   // Use the property-based testing framework we developed in part 2 to implement a
@@ -131,10 +138,13 @@ object Monoid {
   		(m.op(m.op(t._1, t._2),t._3) == m.op(t._1, m.op(t._2, t._3)))) &&
  		// identity law
   	forAll(gen)(a => (m.op(a, m.zero)== a) && (m.op(m.zero,a)==a))
-  //== END EXERCISE 10.4 ======================================
 
- 	// Not sure what trimMonoid is for. I don't think it's mentioned in the book.
-  def trimMonoid(s: String): Monoid[String] = sys.error("todo")
+  def monoidLaws_official_soln[A](m: Monoid[A], gen: Gen[A]): Prop =
+    forAll(for {x <- gen; y <- gen; z <- gen} yield (x,y,z)) (p =>
+      m.op(p._1, m.op(p._2, p._3)) == m.op(m.op(p._1, p._2), p._3)) &&    // Associativity
+      forAll(gen)((a: A) => m.op(a, m.zero) == a && m.op(m.zero, a) == a) // Identity
+  //
+  //== END EXERCISE 10.4 ======================================
 
   /** SECTION 10.2: FOLDING LISTS WITH MONOIDS *************************************
     *
@@ -180,31 +190,41 @@ object Monoid {
   // So, if there's an implicit monoid instance defined for type B, then we can 
   // simply do `foldMap_imp(as)(f) instead of foldMap(as,m)(f)`
   // Next: check foldMap, foldRight, and foldLeft against the official solution.
-  // Here's the OFFICIAL SOLUTION:
+
+  // Here's the OFFICIAL SOLUTION
   def foldMap[A, B](as: List[A], m: Monoid[B])(f: A => B): B =
     as.foldLeft(m.zero)((b, a) => m.op(b, f(a)))
 
   //== END EXERCISE 10.5 ======================================
 
-	  
-  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
 
-  def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B = as.foldLeft(z)(f)
+  def foldRight_first_try[A, B](as: List[A])(z: B)(f: (A, B) => B): B = as.foldRight(z)(f)
+  // Here's the OFFICIAL SOLUTION:
+  def foldRight[A, B](as: List[A])(z: B)(f: (A, B) => B): B =
+    foldMap(as, endoMonoid[B])(f.curried)(z)
 
-	//== EXERCISE 10.6 (Hard) ==========================================================
+  def foldLeft_first_try[A, B](as: List[A])(z: B)(f: (B, A) => B): B = as.foldLeft(z)(f)
+
+  // `swap_curried` will be useful in the next exercise (Ex 10.6).
+  def swap_curried[A,B,C](f: (B, A) => C) = (a: A) => (b:B) => f(b,a)
+
+  //== EXERCISE 10.6 (Hard) ==========================================================
   // foldMap can be implemented using either foldLeft or foldRight.
-  // But you can also write foldLeft and foldRight using foldMap! Try it.  
+  // But you can also write foldLeft and foldRight using foldMap!
   def foldRight_via_foldMap[A,B](as: List[A])(z: B)(f: (A,B) => B): B =
     foldMap(as, endoMonoid[B])(f.curried)(z)
   // Same as above but using implicits (so we don't have to mention endoMonoid)
   def foldRight_imp[A,B](as: List[A])(z: B)(f: (A,B) => B): B = {
-    val fmap =foldMap_imp(as)(f.curried)  // We can't simply use an anonymous function...  
+    val fmap =foldMap_imp(as)(f.curried)  // We can't simply use an anonymous function...
     fmap(z)}                             // ...so use of implicits is not much of a win here.
-  def swap_curried[A,B,C](f: (B, A) => C) = (a: A) => (b:B) => f(b,a)
-  def foldLeft_via_foldMap[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
+
+  def foldLeft_via_foldMap_first_try[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
     foldMap(as, dual(endoMonoid[B]))(swap_curried(f))(z)
-  def foldLeft_via_foldMap_alt[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
+  def foldLeft_via_foldMap_second_try[A,B](as: List[A])(z: B)(f: (B,A) => B): B =
     foldMap(as, dual(endoMonoid[B]))((a:A) => (b:B) => f(b,a))(z)
+  // The OFFICIAL SOLUTION:
+  def foldLeft_via_foldMap[A, B](as: List[A])(z: B)(f: (B, A) => B): B =
+    foldMap(as, dual(endoMonoid[B]))(swap_curried(f))(z) // swap_curried(f) := a => b => f(b, a)
   //== END EXERCISE 10.6 ======================================
 
 
@@ -213,8 +233,8 @@ object Monoid {
 	// of splitting the sequence in two, recursively processing each half, and then adding the
 	// answers together with the monoid.
 	def foldMapV[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): B = 
-		if (v.size==0) m.zero
-		else if (v.size==1) f(v(0))
+		if (v.length==0) m.zero
+		else if (v.length==1) f(v(0))
 		else {
 			val (l,r)=v.splitAt(v.length/2)
 			m.op( foldMapV(l, m)(f), foldMapV(r, m)(f) )
@@ -230,8 +250,16 @@ object Monoid {
     // old code: `Par.map2(a1,a2)(m.op)` but import Par.toParOps allows infix notation
   	val zero = Par.unit(m.zero)
   }
+
+  def parFoldMap_first_try[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
+    Par.flatMap(Par.parMap(v)(f)) { bs => foldMapV( bs, par(m) )( b => Par.lazyUnit(b) ) }
+
+  // OFFICIAL SOLUTION:
   def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
-	  Par.flatMap(Par.parMap(v)(f)) { bs => foldMapV( bs, par(m) )( b => Par.lazyUnit(b) ) }
+    Par.parMap(v)(f).flatMap { bs => foldMapV( bs, par(m) )( b => Par.lazyUnit(b) ) }
+
+
+
   //== END EXERCISE 10.8 ======================================
 
   //== Ex 10.9 (Hard) ====================================================
@@ -325,19 +353,13 @@ object Monoid {
   // recursively splitting it into substrings and counting the words in those substrings.
   // (skipping this for now)
   def count(s: String): Int = sys.error("todo")
+  //== END EXERCISE 10.11 ========================================================
 
-  def productMonoid[A,B](A: Monoid[A], B: Monoid[B]): Monoid[(A, B)] =
-    sys.error("todo")
-
-  def functionMonoid[A,B](B: Monoid[B]): Monoid[A => B] =
-    sys.error("todo")
-
-  def mapMergeMonoid[K,V](V: Monoid[V]): Monoid[Map[K, V]] =
-    sys.error("todo")
-
-  def bag[A](as: IndexedSeq[A]): Map[A, Int] =
-    sys.error("todo")
-  //== END EXERCISE 10.11 ============================================================
+  // Can't find a reference in the book to these four functions:
+  def productMonoid[A,B](A: Monoid[A], B: Monoid[B]): Monoid[(A, B)] = sys.error("todo")
+  def functionMonoid[A,B](B: Monoid[B]): Monoid[A => B] = sys.error("todo")
+  def mapMergeMonoid[K,V](V: Monoid[V]): Monoid[Map[K, V]] = sys.error("todo")
+  def bag[A](as: IndexedSeq[A]): Map[A, Int] = sys.error("todo")
 
 } // <<<<<<<<<<<<<<<<<<<< END: Monoid companion object <<<<<<<<<<<<<<<<<<<<
 

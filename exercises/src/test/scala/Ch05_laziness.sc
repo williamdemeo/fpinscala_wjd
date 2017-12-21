@@ -4,7 +4,7 @@
  */
 
 
-package fpinscala.laziness
+import fpinscala.laziness._
 import Stream._
 
 object Chapter05_scratch {
@@ -110,16 +110,22 @@ object Chapter05_scratch {
  	// three zeros followed by 7 ones:
 	zeros.take(3).append(ones).take(10).toList//> res41: List[Int] = List(0, 0, 0, 1, 1, 1, 1, 1, 1, 1)
 
+  println("fibs_first_try")
+  fibs_first_try.take(7).toList
+
+  println("fibs (official)")
 	fibs.take(7).toList                       //> res42: List[Int] = List(0, 1, 1, 2, 3, 5, 8)
-	 	
+
+  println("fibs_with_unfold")
   fibs_with_unfold.take(7).toList                 //> res43: List[Int] = List(0, 1, 1, 2, 3, 5, 8)
  
   from_with_unfold(7).take(3).toList              //> res44: List[Int] = List(7, 8, 9)
  
  	constant_with_unfold(2).take(5).toList    //> res45: List[Int] = List(2, 2, 2, 2, 2)
- 
- 
- 	ones_with_unfold.take(5).toList           //> res46: List[Int] = List(1, 1, 1, 1, 1)
+
+
+  println("ones_with_unfold")
+  ones_with_unfold.take(5).toList           //> res46: List[Int] = List(1, 1, 1, 1, 1)
  
  
  
