@@ -10,5 +10,11 @@ project.vim
 .project
 .classpath
 .metadata/
-.cache-main
-.cache-tests
+.bsp
+.metals
+.vscode
+.bloop
+project/metals.sbt
+project/project
+.scala
+.scala-build
